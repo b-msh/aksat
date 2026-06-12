@@ -293,7 +293,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
         <div class="fi"><label>💰 مبلغ المقدمة (إن وجد)</label><input type="number" id="fdown" placeholder="مثال: 250000" oninput="calc()"></div>
         <div class="fi"><label>📊 عدد الأقساط (الأشهر) *</label><input type="number" id="fi2" placeholder="مثال: 12" oninput="calc()"></div>
         <div class="fi"><label>💸 القسط الشهري الثابت</label><input type="number" id="fm" placeholder="يحسب تلقائياً" readonly style="background:#e5e7eb"></div>
-        <div class="fi"><label>📅 تاريخ بداية العقد *</label><input type="date" id="fs"></div>
+        <div class="fi"><label>📅 تاريخ أول استحقاق (بداية الأقساط) *</label><input type="date" id="fs"></div>
         <div class="fi"><label>📝 ملاحظات</label><input type="text" id="fo" placeholder="أي ملاحظة..."></div>
       </div>
       <div class="prev" id="prev"></div>
@@ -389,6 +389,16 @@ function totPaidAmts(c){
 
 function isPaid(c,ym){ return !!(c.pay&&c.pay[ym]); }
 function pCount(c){ return c.pay?Object.keys(c.pay).length:0; }
+
+// دالة فحص ما إذا كان الزبون مستحقاً للشهر المحدد بناءً على تاريخ عقده المستقبلي
+function isDue(c, ym) {
+  if(!c.start) return true;
+  var target = ym.split('-');
+  var start = c.start.split('-');
+  var tY = Number(target[0]), tM = Number(target[1]);
+  var sY = Number(start[0]), sM = Number(start[1]);
+  return (tY > sY) || (tY === sY && tM >= sM);
+}
 
 function remAmt(c){ 
   var base = Number(c.tot) - (Number(c.down) || 0);
@@ -579,7 +589,12 @@ window.sw = function(t) {
 function updStats() {
   var ym=document.getElementById('selm').value||curYM();
   var pd=0,up=0,tot=0;
-  C.forEach(c=>{ if(isPaid(c,ym))pd++;else up++; tot+=Number(c.mon)||0; });
+  C.forEach(c=>{ 
+    if(isDue(c, ym)) { // لا نحسب إحصائيات الشهر للزبون غير المستحق
+      if(isPaid(c,ym)) pd++; else up++; 
+      tot+=Number(c.mon)||0; 
+    }
+  });
   document.getElementById('s1').textContent=C.length;
   document.getElementById('s2').textContent=pd;
   document.getElementById('s3').textContent=up;
@@ -600,7 +615,10 @@ function rc() {
   var rows=C.filter(c=>{
     var ms=!q||c.name.toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.dev||'').toLowerCase().includes(q);
     var paid=isPaid(c,ym);
-    var mf=FIL==='a'||(FIL==='p'&&paid)||(FIL==='u'&&!paid);
+    var due=isDue(c,ym);
+    
+    // تصفية ذكية: إذا لم يكن مستحقاً هذا الشهر، لا يظهر في تصفية "لم يدفعوا"
+    var mf=FIL==='a'||(FIL==='p'&&paid)||(FIL==='u'&&!paid&&due);
     return ms&&mf;
   });
   var tb=document.getElementById('ctb');
@@ -608,10 +626,14 @@ function rc() {
   document.getElementById('emp-c').style.display=rows.length?'none':'block';
   rows.forEach((c,i)=>{
     var paid=isPaid(c,ym);
+    var due=isDue(c,ym);
     var pc=pCount(c);var ti=Number(c.inst)||1;
     var prog=Math.min(100,Math.round(pc/ti*100));
     var rem=remAmt(c);var done=rem<=0;
     var tr=document.createElement('tr');
+    
+    var badgeHtml = !due ? '<span class="badge bskp">🔄 مؤجل للشهر القادم</span>' : (paid?'<span class="badge bpd">✅ دفع</span>':'<span class="badge bup">⏳ لم يدفع</span>');
+    
     tr.innerHTML='<td>'+(i+1)+'</td>'+
       '<td style="font-weight:700;color:#1f2937">'+esc(c.name)+'</td>'+
       '<td style="direction:ltr;text-align:right;font-size:12px">'+esc(c.phone||'')+'</td>'+
@@ -619,13 +641,14 @@ function rc() {
       '<td>'+fMoney(c.mon)+'</td>'+
       '<td class="rem'+(done?' dn':'')+'">'+(done?'✅ مكتمل':fMoney(rem))+'</td>'+
       '<td><div class="pb"><div class="pf'+(done?' dn':'')+'" style="width:'+prog+'%"></div></div><div class="pt">'+pc+'/'+ti+'</div></td>'+
-      '<td><span class="badge '+(paid?'bpd':'bup')+'">'+(paid?'✅ دفع':'⏳ لم يدفع')+'</span></td>'+
+      '<td>'+badgeHtml+'</td>'+
       '<td><div style="display:flex;gap:5px">'+
         '<button class="btn bp bs" onclick="openDet(\''+esc(c.id)+'\')">📋 تفاصيل</button>'+
         '<button class="btn by bs" onclick="startEdit(\''+esc(c.id)+'\')">✏️ تعديل</button>'+
         '<button class="btn bg bs" onclick="exportPDF(\''+esc(c.id)+'\')">🧾 PDF</button>'+
         '<button class="btn bd bs" onclick="askDel(\''+esc(c.id)+'\')">🗑</button>'+
       '</div></td>';
+    tr.style.opacity = due ? '1' : '0.65'; // تقليل السطوع للزبائن المؤجلين لتمييزهم
     tb.appendChild(tr);
   });
   updStats();
@@ -635,9 +658,13 @@ function rp() {
   var ym=document.getElementById('selm').value||curYM();
   var tb=document.getElementById('ptb');
   tb.innerHTML='';
-  document.getElementById('emp-p').style.display=C.length?'none':'block';
+  
+  // تصفية قائمة الأشهر لعرض المستحقين فقط في هذا الشهر
+  var dueCustomers = C.filter(c => isDue(c, ym));
+  document.getElementById('emp-p').style.display=dueCustomers.length?'none':'block';
   var pd=0,up=0;
-  C.forEach((c,i)=>{
+  
+  dueCustomers.forEach((c,i)=>{
     var paid=isPaid(c,ym);
     if(paid)pd++;else up++;
     var pdate=paid&&c.pay[ym]?c.pay[ym].dt:'';
@@ -793,12 +820,12 @@ window.openDet = function(id) {
   ACTIVE_DET_ID = id;
   
   var currentRem = remAmt(c);
-  var isFullyPaidAhead = currentRem <= 0; // فحص السداد المبكر الكلي
+  var isFullyPaidAhead = currentRem <= 0;
   
   var pc=pCount(c);var ti=Number(c.inst);var prog=Math.min(100,Math.round(pc/ti*100));
   var done=isFullyPaidAhead;
   var mh='';
-  var sd=new Date(c.start);
+  var sd = new Date(c.start);
   
   for(var i=0;i<ti;i++){
     var d=new Date(sd.getFullYear(),sd.getMonth()+i,1);
@@ -807,21 +834,18 @@ window.openDet = function(id) {
     var actualAmt = pd && pd.amt ? pd.amt : c.mon;
     
     if (pd) {
-      // قسط مدفوع فعلياً
       mh+='<div class="mi pd" onclick="openPayFlexMo(\''+esc(c.id)+'\',\''+esc(ym)+'\', true)">'+
         '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
         '<div class="ms3">✅ مدفوع ('+fMoney(actualAmt)+')</div>'+
         '<div class="mdt">'+fDate(pd.dt)+'</div>'+
         '</div>';
     } else if (isFullyPaidAhead) {
-      // قسط غير مدفوع ولكن الحساب الكلي صفر (سداد مبكر زائد)
       mh+='<div class="mi skp">'+
         '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
         '<div class="ms3">🔄 غير مطلوب</div>'+
         '<div class="mdt">سداد مبكر</div>'+
         '</div>';
     } else {
-      // قسط متبقي عادي ومطلوب سداده
       mh+='<div class="mi up2" onclick="openPayFlexMo(\''+esc(c.id)+'\',\''+esc(ym)+'\', true)">'+
         '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
         '<div class="ms3">⏳ لم يدفع</div>'+
@@ -837,7 +861,7 @@ window.openDet = function(id) {
       '<div class="ib"><div class="il">السعر الكلي للجهاز</div><div class="iv">'+fMoney(c.tot)+'</div></div>'+
       '<div class="ib" style="background:#e8f0fd"><div class="il" style="color:#1a56db">المقدمة المدفوعة</div><div class="iv" style="color:#1a56db">'+fMoney(c.down||0)+'</div></div>'+
       '<div class="ib"><div class="il">القسط الشهري الثابت</div><div class="iv">'+fMoney(c.mon)+'</div></div>'+
-      '<div class="ib"><div class="il">تاريخ البداية</div><div class="iv">'+fDate(c.start)+'</div></div>'+
+      '<div class="ib"><div class="il">تاريخ بداية الأقساط</div><div class="iv">'+fDate(c.start)+'</div></div>'+
       '<div class="ib" style="background:'+(done?'#def7ec':'#fde8e8')+'">'+
         '<div class="il" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
         '<div class="iv" style="color:'+(done?'#057a55':'#c81e1e')+'">'+(done?'✅ أكمل الدفع':fMoney(currentRem))+'</div></div>'+
@@ -869,8 +893,8 @@ window.closeDelMo = function(){ document.getElementById('mo-del').className='mo'
 window.expUnpaid = function() {
   var ym=document.getElementById('selm').value||curYM();
   var p=ym.split('-');var mn=MN[Number(p[1])-1]+' '+p[0];
-  var up=C.filter(c=>!isPaid(c,ym));
-  if(!up.length){alert('✅ جميع الزبائن دفعوا قسط هذا الشهر!');return;}
+  var up=C.filter(c=>!isPaid(c,ym) && isDue(c, ym)); // تصدير المتأخرين المستحقين فقط
+  if(!up.length){alert('✅ جميع الزبائن المستحقين دفعوا قسط هذا الشهر!');return;}
   var txt='قائمة الزبائن الذين لم يدفعوا قسط '+mn+'\n========================================\n\n';
   up.forEach((c,i)=>{txt+=(i+1)+'. '+c.name+'\n   رقم الهاتف: '+c.phone+'\n   القسط: '+fMoney(c.mon)+'\n\n';});
   txt+='\nالإجمالي: '+up.length+' زبون';
@@ -905,6 +929,7 @@ function _pc(c){return c.pay?Object.keys(c.pay).length:0;}
 function _tpa(c){if(!c.pay)return 0;var s=0;Object.keys(c.pay).forEach(function(k){s+=Number(c.pay[k].amt||c.mon);});return s;}
 function _rem(c){var base=Number(c.tot)-(Number(c.down)||0);var r=base-_tpa(c);return r>0?r:0;}
 function _ip(c,ym){return !!(c.pay&&c.pay[ym]);}
+function _idue(c,ym){if(!c.start)return true;var t=ym.split('-');var s=c.start.split('-');var tY=Number(t[0]),tM=Number(t[1]),sY=Number(s[0]),sM=Number(s[1]);return(tY>sY)||(tY===sY&&tM>=sM);}
 function _cym(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);}
 function _getData(){return window.__appData||[];}
 
@@ -912,12 +937,13 @@ function exportExcelAll(){
   var C=_getData();
   if(!C.length){alert('لا يوجد زبائن للتصدير');return;}
   var ym=document.getElementById('selm').value||_cym();
-  var rows=[['#','اسم الزبون','رقم الهاتف','الجهاز','السعر الكلي','المقدمة','عدد الأقساط','القسط الشهري الثابت','تاريخ البداية','أشهر الدفع','إجمالي المدفوع أقساط','المبلغ المتبقي الكلي','حالة هذا الشهر','ملاحظات']];
+  var rows=[['#','اسم الزبون','رقم الهاتف','الجهاز','السعر الكلي','المقدمة','عدد الأقساط','القسط الشهري الثابت','تاريخ أول استحقاق','أشهر الدفع','إجمالي المدفوع أقساط','المبلغ المتبقي الكلي','حالة هذا الشهر','ملاحظات']];
   C.forEach(function(c,i){
-    rows.push([i+1,c.name,c.phone,c.dev||'',Number(c.tot),Number(c.down||0),Number(c.inst),Number(c.mon),c.start,_pc(c),_tpa(c),_rem(c),_ip(c,ym)?'دفع':'لم يدفع',c.notes||'']);
+    var statusStr = !_idue(c,ym) ? 'مؤجل' : (_ip(c,ym)?'دفع':'لم يدفع');
+    rows.push([i+1,c.name,c.phone,c.dev||'',Number(c.tot),Number(c.down||0),Number(c.inst),Number(c.mon),c.start,_pc(c),_tpa(c),_rem(c),statusStr,c.notes||'']);
   });
   var ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:5},{wch:20},{wch:16},{wch:18},{wch:14},{wch:14},{wch:12},{wch:16},{wch:14},{wch:14},{wch:16},{wch:16},{wch:14},{wch:20}];
+  ws['!cols']=[{wch:5},{wch:20},{wch:16},{wch:18},{wch:14},{wch:14},{wch:12},{wch:16},{wch:18},{wch:14},{wch:16},{wch:16},{wch:14},{wch:20}];
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'الزبائن');
   var p=ym.split('-');
@@ -931,7 +957,9 @@ function exportMonthExcel(){
   var p=ym.split('-');
   var mn=MN2[Number(p[1])-1]+' '+p[0];
   var rows=[['#','اسم الزبون','رقم الهاتف','مبلغ القسط المستلم','الحالة','تاريخ الدفع']];
-  C.forEach(function(c,i){
+  
+  var filtered = C.filter(function(c){ return _idue(c,ym); });
+  filtered.forEach(function(c,i){
     var paid=_ip(c,ym);
     var amt=paid&&c.pay[ym]&&c.pay[ym].amt?c.pay[ym].amt:c.mon;
     var pdate=paid&&c.pay[ym]?_fd(c.pay[ym].dt):'-';
@@ -990,7 +1018,7 @@ function exportPDF(id){
       '<div class="box"><div class="lbl">السعر الكلي للجهاز</div><div class="val">'+_fm(c.tot)+'</div></div>'+
       '<div class="box" style="background:#e8f0fd"><div class="lbl" style="color:#1a56db">المقدمة</div><div class="val" style="color:#1a56db">'+_fm(c.down||0)+'</div></div>'+
       '<div class="box"><div class="lbl">القسط الشهري الثابت</div><div class="val">'+_fm(c.mon)+'</div></div>'+
-      '<div class="box"><div class="lbl">تاريخ البداية</div><div class="val">'+_fd(c.start)+'</div></div>'+
+      '<div class="box"><div class="lbl">تاريخ أول استحقاق</div><div class="val">'+_fd(c.start)+'</div></div>'+
       '<div class="box"><div class="lbl">أشهر الأقساط المسجلة</div><div class="val">'+pc+' من '+ti+'</div></div>'+
       '<div class="box" style="background:'+(done?'#def7ec':'#fde8e8')+'">'+
         '<div class="lbl" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
@@ -1003,7 +1031,7 @@ function exportPDF(id){
     '</body></html>';
   var w=window.open('','_blank');
   if(w){w.document.write(html);w.document.close();}
-  else{alert('يرجى السماح بالنوافذ المنبثقة في المتصفح');}
+  else{alert('يرجى السماح بالنوافذ النوافذ المنبثقة في المتصفح');}
 }
 </script>
 </body>
