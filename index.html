@@ -157,6 +157,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login-page">
   <div class="login-card">
     <div class="login-logo">📱</div>
@@ -169,6 +170,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- PENDING -->
 <div id="pending-page">
   <div class="pending-card">
     <div class="pending-icon">⏳</div>
@@ -182,6 +184,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- ADMIN PAGE -->
 <div id="admin-page">
   <div class="admin-hdr">
     <div style="display:flex;align-items:center;gap:10px">
@@ -204,6 +207,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- MAIN APP -->
 <div id="app" style="display:none">
 <header class="hdr">
   <div class="hdr-l">
@@ -301,6 +305,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 </div>
 </div>
 
+<!-- MODAL DETAIL -->
 <div class="mo" id="mo-d">
   <div class="md">
     <div class="mh"><h2 id="mo-title">تفاصيل الزبون</h2><button class="xb" onclick="closeMo()">✕</button></div>
@@ -308,6 +313,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- MODAL PAYFLEX (نافذة الدفع المرن) -->
 <div class="mo" id="mo-pf">
   <div class="md" style="max-width:380px">
     <div class="mh"><h2>💰 تسجيل قسط جديد - الدفع المرن</h2><button class="xb" onclick="closePayFlexMo()">✕</button></div>
@@ -325,6 +331,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- MODAL DELETE -->
 <div class="mo" id="mo-del">
   <div class="md" style="max-width:360px">
     <div class="mh"><h2>⚠️ تأكيد الحذف</h2><button class="xb" onclick="closeDelMo()">✕</button></div>
@@ -365,7 +372,7 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-let C = [], FIL = 'a', DEL_ID = null, currentUser = null;
+let C = [], FIL = 'a', DEL_ID = null, currentUser = null, ACTIVE_DET_ID = null;
 window.C = C;
 const MN = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
@@ -376,7 +383,6 @@ function p2(n){ return n<10?'0'+n:''+n; }
 function fDate(s){ if(!s||s==='-') return '-'; var p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
 function fMoney(n){ if(!n&&n!==0) return '0'; return Number(n).toLocaleString()+' د.ع'; }
 
-// حساب إجمالي المبالغ المدفوعة الفردية للأقساط
 function totPaidAmts(c){
   if(!c.pay) return 0;
   var sum = 0;
@@ -384,11 +390,9 @@ function totPaidAmts(c){
   return sum;
 }
 
-// فحص حالة الشهر البرمجية
 function isPaid(c,ym){ return !!(c.pay&&c.pay[ym]); }
 function pCount(c){ return c.pay?Object.keys(c.pay).length:0; }
 
-// حاسبة المبلغ المتبقي الدقيقة: السعر الكلي - المقدمة - إجمالي المدفوع بالأقساط المرنة
 function remAmt(c){ 
   var base = Number(c.tot) - (Number(c.down) || 0);
   var r = base - totPaidAmts(c);
@@ -652,7 +656,7 @@ function rp() {
       '<td>'+(paid ? `<span class="badge bpp">${fMoney(actualAmt)}</span>` : fMoney(c.mon))+'</td>'+
       '<td><span class="badge '+(paid?'bpd':'bup')+'">'+(paid?'✅ دفع':'⏳ لم يدفع')+'</span></td>'+
       '<td>'+(pdate?fDate(pdate):'-')+'</td>'+
-      '<td>'+(!paid?'<button class="btn bg bs" onclick="openPayFlexMo(\''+esc(c.id)+'\',\''+esc(ym)+'\')">✅ تسجيل دفع</button>':'<button class="btn bo bs" onclick="unPaid(\''+esc(c.id)+'\',\''+esc(ym)+'\')">↩ إلغاء</button>')+'</td>'+
+      '<td>'+(!paid?'<button class="btn bg bs" onclick="openPayFlexMo(\''+esc(c.id)+'\',\''+esc(ym)+'\', false)">✅ تسجيل دفع</button>':'<button class="btn bo bs" onclick="unPaid(\''+esc(c.id)+'\',\''+esc(ym)+'\')">↩ إلغاء</button>')+'</td>'+
       '<td><a class="btn bw bs" href="https://wa.me/'+waPhone+'?text='+waMsg+'" target="_blank">💬 واتساب</a></td>';
     tb.appendChild(tr);
   });
@@ -661,11 +665,13 @@ function rp() {
   updStats();
 }
 
-// ── نافذة الدفع المرن ──
-window.openPayFlexMo = function(id, ym) {
+// ── نافذة الدفع المرن المحدثة للعمل من الصفحتين ──
+window.openPayFlexMo = function(id, ym, fromDetails) {
   var c = C.find(x => x.id === id); if(!c) return;
-  document.getElementById('pf-info-text').innerHTML = `الزبون: <b>${esc(c.name)}</b><br>القسط الافتراضي المقدر للشهر: <b>${fMoney(c.mon)}</b>`;
-  document.getElementById('pf-amount').value = c.mon; // وضع القسط الافتراضي في الخانة تلقائياً
+  var alreadyPaid = isPaid(c, ym);
+  
+  document.getElementById('pf-info-text').innerHTML = `الزبون: <b>${esc(c.name)}</b><br>الشهر المستهدف: <b>${ym}</b><br>القسط الافتراضي الثابت: <b>${fMoney(c.mon)}</b>`;
+  document.getElementById('pf-amount').value = alreadyPaid ? c.pay[ym].amt : c.mon;
   document.getElementById('mo-pf').className = 'mo open';
   
   document.getElementById('pf-save-btn').onclick = async function() {
@@ -674,7 +680,10 @@ window.openPayFlexMo = function(id, ym) {
     if(!c.pay) c.pay = {};
     c.pay[ym] = { dt: today(), amt: inputAmt };
     await saveToFirestore(c);
-    closePayFlexMo(); rp(); rc();
+    closePayFlexMo(); 
+    rp(); 
+    rc();
+    if(fromDetails) openDet(id); // إعادة تحميل واجهة التفاصيل لتعكس المبلغ الجديد فوراً
   };
 };
 window.closePayFlexMo = function() { document.getElementById('mo-pf').className = 'mo'; };
@@ -683,6 +692,7 @@ window.unPaid = async function(id,ym) {
   var c=C.find(x=>x.id===id); if(!c||!c.pay) return;
   delete c.pay[ym];
   await saveToFirestore(c); rp(); rc();
+  if(ACTIVE_DET_ID === id) openDet(id);
 };
 
 window.calc = function() {
@@ -717,7 +727,6 @@ window.addC = async function() {
   if(!name||!phone||!dev||!tot||!inst||!mon||!start){ al.className='alert er'; al.textContent='⚠️ يرجى ملء جميع الحقول الإلزامية المشار إليها بـ *'; return; }
   
   if(editId) {
-    // وضع التعديل لزبون موجود
     var idx = C.findIndex(x => x.id === editId);
     if(idx !== -1) {
       C[idx].name = name;
@@ -734,7 +743,6 @@ window.addC = async function() {
       resetToCreate();
     }
   } else {
-    // وضع إضافة زبون جديد
     var cu={id:uid(),name,phone,dev,tot:Number(tot),down:Number(down),inst:Number(inst),mon:Number(mon),start,notes,pay:{},createdAt:Date.now()};
     C.unshift(cu);
     await saveToFirestore(cu);
@@ -747,7 +755,6 @@ window.addC = async function() {
   setTimeout(()=>{al.className='alert';},4000);
 };
 
-// ── تفعيل عملية التعديل ──
 window.startEdit = function(id) {
   var c = C.find(x => x.id === id); if(!c) return;
   document.getElementById('edit-id').value = c.id;
@@ -767,7 +774,7 @@ window.startEdit = function(id) {
   document.getElementById('clear-btn').style.display = 'none';
   
   calc();
-  sw('a'); // نقل المستخدم تلقائياً لتبويب الإدخال والتعديل
+  sw('a');
 };
 
 window.resetToCreate = function() {
@@ -787,6 +794,7 @@ window.clrF = function() {
 
 window.openDet = function(id) {
   var c=C.find(x=>x.id===id); if(!c) return;
+  ACTIVE_DET_ID = id;
   var pc=pCount(c);var ti=Number(c.inst);var prog=Math.min(100,Math.round(pc/ti*100));
   var rem=remAmt(c);var done=rem<=0;
   var mh='';
@@ -796,7 +804,9 @@ window.openDet = function(id) {
     var ym=d.getFullYear()+'-'+p2(d.getMonth()+1);
     var pd=c.pay&&c.pay[ym];
     var actualAmt = pd && pd.amt ? pd.amt : c.mon;
-    mh+='<div class="mi '+(pd?'pd':'up2')+'" onclick="togM2(\''+esc(c.id)+'\',\''+esc(ym)+'\')">'+
+    
+    // عند الضغط يفتح حقل كتابة المبلغ المستلم التعديلي المرن
+    mh+='<div class="mi '+(pd?'pd':'up2')+'" onclick="openPayFlexMo(\''+esc(c.id)+'\',\''+esc(ym)+'\', true)">'+
       '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
       '<div class="ms3">'+(pd?'✅ مدفوع ('+fMoney(actualAmt)+')':'⏳ لم يدفع')+'</div>'+
       (pd?'<div class="mdt">'+fDate(pd.dt)+'</div>':'')+
@@ -820,22 +830,12 @@ window.openDet = function(id) {
       '<div class="pb" style="width:100%;height:9px"><div class="pf'+(done?' dn':'')+'" style="width:'+prog+'%;height:9px"></div></div>'+
     '</div>'+
     (c.notes?'<div style="background:#fdf6b2;border-radius:7px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#92400e">📝 '+esc(c.notes)+'</div>':'')+
-    '<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#374151">📅 سجل الأشهر (اضغط لإلغاء أو تسجيل دفع سريع بالقسط الثابت)</div>'+
+    '<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#374151">📅 سجل الأشهر (اضغط لتسجيل قسط جديد أو تعديل قيمة المبلغ المدفوع)</div>'+
     '<div class="mg">'+mh+'</div>';
   document.getElementById('mo-d').className='mo open';
 };
 
-window.togM2 = async function(id,ym) {
-  var c=C.find(x=>x.id===id); if(!c) return;
-  if(!c.pay) c.pay={};
-  if(c.pay[ym]) {
-    delete c.pay[ym];
-  } else {
-    c.pay[ym]={dt:today(), amt: c.mon}; // تسجيل دفع سريع بالقسط الثابت الأساسي عند النقر من داخل التفاصيل
-  }
-  await saveToFirestore(c); updStats(); rc(); openDet(id);
-};
-window.closeMo = function(){ document.getElementById('mo-d').className='mo'; };
+window.closeMo = function(){ document.getElementById('mo-d').className='mo'; ACTIVE_DET_ID = null; };
 
 window.askDel = function(id) {
   DEL_ID=id;
