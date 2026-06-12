@@ -95,7 +95,7 @@ tbody tr{border-bottom:1px solid #f3f4f6;transition:background .12s}
 tbody tr:hover{background:#f9fafb}
 td{padding:9px 10px;color:#374151;vertical-align:middle}
 .badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700}
-.bpd{background:#def7ec;color:#057a55}.bup{background:#fde8e8;color:#c81e1e}.bpp{background:#e8f0fd;color:#1a56db}.bskip{background:#f3f4f6;color:#6b7280}
+.bpd{background:#def7ec;color:#057a55}.bup{background:#fde8e8;color:#c81e1e}.bpp{background:#e8f0fd;color:#1a56db}.b4due{background:#fef08a;color:#854d0e}.bskip{background:#f3f4f6;color:#6b7280}
 .pb{background:#e5e7eb;border-radius:10px;height:6px;overflow:hidden;width:75px}
 .pf{height:6px;border-radius:10px;background:#1a56db}
 .pf.dn{background:#057a55}
@@ -293,8 +293,9 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
         <div class="fi"><label>💰 مبلغ المقدمة (إن وجد)</label><input type="number" id="fdown" placeholder="مثال: 250000" oninput="calc()"></div>
         <div class="fi"><label>📊 عدد الأقساط (الأشهر) *</label><input type="number" id="fi2" placeholder="مثال: 12" oninput="calc()"></div>
         <div class="fi"><label>💸 القسط الشهري الثابت</label><input type="number" id="fm" placeholder="يحسب تلقائياً" readonly style="background:#e5e7eb"></div>
-        <div class="fi"><label>📅 تاريخ أول استحقاق (بداية الأقساط) *</label><input type="date" id="fs"></div>
-        <div class="fi"><label>📝 ملاحظات</label><input type="text" id="fo" placeholder="أي ملاحظة..."></div>
+        <div class="fi"><label>📝 تاريخ توقيع العقد (الشراء) *</label><input type="date" id="fbuy"></div>
+        <div class="fi"><label>📅 تاريخ أول قسط (الاستحقاق) *</label><input type="date" id="fs"></div>
+        <div class="fi" style="grid-column: span 2"><label>📝 ملاحظات</label><input type="text" id="fo" placeholder="أي ملاحظة..."></div>
       </div>
       <div class="prev" id="prev"></div>
       <div style="margin-top:13px;display:flex;gap:8px">
@@ -390,7 +391,6 @@ function totPaidAmts(c){
 function isPaid(c,ym){ return !!(c.pay&&c.pay[ym]); }
 function pCount(c){ return c.pay?Object.keys(c.pay).length:0; }
 
-// دالة فحص ما إذا كان الزبون مستحقاً للشهر المحدد بناءً على تاريخ عقده المستقبلي
 function isDue(c, ym) {
   if(!c.start) return true;
   var target = ym.split('-');
@@ -574,6 +574,7 @@ async function deleteFromFirestore(id) {
 // ── INIT UI ──
 function initUI() {
   document.getElementById('selm').value = curYM();
+  document.getElementById('fbuy').value = today();
   document.getElementById('fs').value = today();
   updStats(); rc();
 }
@@ -590,7 +591,7 @@ function updStats() {
   var ym=document.getElementById('selm').value||curYM();
   var pd=0,up=0,tot=0;
   C.forEach(c=>{ 
-    if(isDue(c, ym)) { // لا نحسب إحصائيات الشهر للزبون غير المستحق
+    if(isDue(c, ym)) {
       if(isPaid(c,ym)) pd++; else up++; 
       tot+=Number(c.mon)||0; 
     }
@@ -616,8 +617,6 @@ function rc() {
     var ms=!q||c.name.toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.dev||'').toLowerCase().includes(q);
     var paid=isPaid(c,ym);
     var due=isDue(c,ym);
-    
-    // تصفية ذكية: إذا لم يكن مستحقاً هذا الشهر، لا يظهر في تصفية "لم يدفعوا"
     var mf=FIL==='a'||(FIL==='p'&&paid)||(FIL==='u'&&!paid&&due);
     return ms&&mf;
   });
@@ -648,7 +647,7 @@ function rc() {
         '<button class="btn bg bs" onclick="exportPDF(\''+esc(c.id)+'\')">🧾 PDF</button>'+
         '<button class="btn bd bs" onclick="askDel(\''+esc(c.id)+'\')">🗑</button>'+
       '</div></td>';
-    tr.style.opacity = due ? '1' : '0.65'; // تقليل السطوع للزبائن المؤجلين لتمييزهم
+    tr.style.opacity = due ? '1' : '0.65';
     tb.appendChild(tr);
   });
   updStats();
@@ -659,7 +658,6 @@ function rp() {
   var tb=document.getElementById('ptb');
   tb.innerHTML='';
   
-  // تصفية قائمة الأشهر لعرض المستحقين فقط في هذا الشهر
   var dueCustomers = C.filter(c => isDue(c, ym));
   document.getElementById('emp-p').style.display=dueCustomers.length?'none':'block';
   var pd=0,up=0;
@@ -742,12 +740,13 @@ window.addC = async function() {
   var down=document.getElementById('fdown').value || 0;
   var inst=document.getElementById('fi2').value;
   var mon=document.getElementById('fm').value;
+  var buyDate=document.getElementById('fbuy').value || today();
   var start=document.getElementById('fs').value;
   var notes=(document.getElementById('fo').value||'').trim();
   var editId=document.getElementById('edit-id').value;
   var al=document.getElementById('add-alert');
   
-  if(!name||!phone||!dev||!tot||!inst||!mon||!start){ al.className='alert er'; al.textContent='⚠️ يرجى ملء جميع الحقول الإلزامية المشار إليها بـ *'; return; }
+  if(!name||!phone||!dev||!tot||!inst||!mon||!start||!buyDate){ al.className='alert er'; al.textContent='⚠️ يرجى ملء جميع الحقول الإلزامية المشار إليها بـ *'; return; }
   
   if(editId) {
     var idx = C.findIndex(x => x.id === editId);
@@ -759,6 +758,7 @@ window.addC = async function() {
       C[idx].down = Number(down);
       C[idx].inst = Number(inst);
       C[idx].mon = Number(mon);
+      C[idx].buyDate = buyDate;
       C[idx].start = start;
       C[idx].notes = notes;
       await saveToFirestore(C[idx]);
@@ -766,7 +766,7 @@ window.addC = async function() {
       resetToCreate();
     }
   } else {
-    var cu={id:uid(),name,phone,dev,tot:Number(tot),down:Number(down),inst:Number(inst),mon:Number(mon),start,notes,pay:{},createdAt:Date.now()};
+    var cu={id:uid(),name,phone,dev,tot:Number(tot),down:Number(down),inst:Number(inst),mon:Number(mon),buyDate,start,notes,pay:{},createdAt:Date.now()};
     C.unshift(cu);
     await saveToFirestore(cu);
     al.className='alert ok'; al.textContent='✅ تم إضافة الزبون "'+name+'" بنجاح!';
@@ -788,6 +788,7 @@ window.startEdit = function(id) {
   document.getElementById('fdown').value = c.down || 0;
   document.getElementById('fi2').value = c.inst;
   document.getElementById('fm').value = c.mon;
+  document.getElementById('fbuy').value = c.buyDate || c.start; // في حال عدم وجود حقل تاريخ شراء قديم نضع تاريخ البداية
   document.getElementById('fs').value = c.start;
   document.getElementById('fo').value = c.notes || '';
   
@@ -812,6 +813,7 @@ window.resetToCreate = function() {
 window.clrF = function() {
   ['fn','fp','fd','ft','fdown','fi2','fm','fo'].forEach(id=>{document.getElementById(id).value='';});
   document.getElementById('fs').value=today();
+  document.getElementById('fbuy').value=today();
   document.getElementById('prev').style.display='none';
 };
 
@@ -861,7 +863,8 @@ window.openDet = function(id) {
       '<div class="ib"><div class="il">السعر الكلي للجهاز</div><div class="iv">'+fMoney(c.tot)+'</div></div>'+
       '<div class="ib" style="background:#e8f0fd"><div class="il" style="color:#1a56db">المقدمة المدفوعة</div><div class="iv" style="color:#1a56db">'+fMoney(c.down||0)+'</div></div>'+
       '<div class="ib"><div class="il">القسط الشهري الثابت</div><div class="iv">'+fMoney(c.mon)+'</div></div>'+
-      '<div class="ib"><div class="il">تاريخ بداية الأقساط</div><div class="iv">'+fDate(c.start)+'</div></div>'+
+      '<div class="ib" style="background:#fff7ed"><div class="il" style="color:#c2410c">📆 تاريخ توقيع العقد</div><div class="iv" style="color:#c2410c">'+fDate(c.buyDate || c.start)+'</div></div>'+
+      '<div class="ib"><div class="il">📅 بداية الأقساط</div><div class="iv">'+fDate(c.start)+'</div></div>'+
       '<div class="ib" style="background:'+(done?'#def7ec':'#fde8e8')+'">'+
         '<div class="il" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
         '<div class="iv" style="color:'+(done?'#057a55':'#c81e1e')+'">'+(done?'✅ أكمل الدفع':fMoney(currentRem))+'</div></div>'+
@@ -893,7 +896,7 @@ window.closeDelMo = function(){ document.getElementById('mo-del').className='mo'
 window.expUnpaid = function() {
   var ym=document.getElementById('selm').value||curYM();
   var p=ym.split('-');var mn=MN[Number(p[1])-1]+' '+p[0];
-  var up=C.filter(c=>!isPaid(c,ym) && isDue(c, ym)); // تصدير المتأخرين المستحقين فقط
+  var up=C.filter(c=>!isPaid(c,ym) && isDue(c, ym));
   if(!up.length){alert('✅ جميع الزبائن المستحقين دفعوا قسط هذا الشهر!');return;}
   var txt='قائمة الزبائن الذين لم يدفعوا قسط '+mn+'\n========================================\n\n';
   up.forEach((c,i)=>{txt+=(i+1)+'. '+c.name+'\n   رقم الهاتف: '+c.phone+'\n   القسط: '+fMoney(c.mon)+'\n\n';});
@@ -937,13 +940,13 @@ function exportExcelAll(){
   var C=_getData();
   if(!C.length){alert('لا يوجد زبائن للتصدير');return;}
   var ym=document.getElementById('selm').value||_cym();
-  var rows=[['#','اسم الزبون','رقم الهاتف','الجهاز','السعر الكلي','المقدمة','عدد الأقساط','القسط الشهري الثابت','تاريخ أول استحقاق','أشهر الدفع','إجمالي المدفوع أقساط','المبلغ المتبقي الكلي','حالة هذا الشهر','ملاحظات']];
+  var rows=[['#','اسم الزبون','رقم الهاتف','الجهاز','السعر الكلي','المقدمة','عدد الأقساط','القسط الشهري الثابت','تاريخ الشراء','تاريخ أول قسط','أشهر الدفع','إجمالي المدفوع أقساط','المبلغ المتبقي الكلي','حالة هذا الشهر','ملاحظات']];
   C.forEach(function(c,i){
     var statusStr = !_idue(c,ym) ? 'مؤجل' : (_ip(c,ym)?'دفع':'لم يدفع');
-    rows.push([i+1,c.name,c.phone,c.dev||'',Number(c.tot),Number(c.down||0),Number(c.inst),Number(c.mon),c.start,_pc(c),_tpa(c),_rem(c),statusStr,c.notes||'']);
+    rows.push([i+1,c.name,c.phone,c.dev||'',Number(c.tot),Number(c.down||0),Number(c.inst),Number(c.mon),c.buyDate || c.start,c.start,_pc(c),_tpa(c),_rem(c),statusStr,c.notes||'']);
   });
   var ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:5},{wch:20},{wch:16},{wch:18},{wch:14},{wch:14},{wch:12},{wch:16},{wch:18},{wch:14},{wch:16},{wch:16},{wch:14},{wch:20}];
+  ws['!cols']=[{wch:5},{wch:20},{wch:16},{wch:18},{wch:14},{wch:14},{wch:12},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:14},{wch:20}];
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'الزبائن');
   var p=ym.split('-');
@@ -1018,7 +1021,8 @@ function exportPDF(id){
       '<div class="box"><div class="lbl">السعر الكلي للجهاز</div><div class="val">'+_fm(c.tot)+'</div></div>'+
       '<div class="box" style="background:#e8f0fd"><div class="lbl" style="color:#1a56db">المقدمة</div><div class="val" style="color:#1a56db">'+_fm(c.down||0)+'</div></div>'+
       '<div class="box"><div class="lbl">القسط الشهري الثابت</div><div class="val">'+_fm(c.mon)+'</div></div>'+
-      '<div class="box"><div class="lbl">تاريخ أول استحقاق</div><div class="val">'+_fd(c.start)+'</div></div>'+
+      '<div class="box" style="background:#fff7ed"><div class="lbl" style="color:#c2410c">📆 تاريخ توقيع العقد (الشراء)</div><div class="val" style="color:#c2410c">'+_fd(c.buyDate || c.start)+'</div></div>'+
+      '<div class="box"><div class="lbl">📅 تاريخ أول قسط (الاستحقاق)</div><div class="val">'+_fd(c.start)+'</div></div>'+
       '<div class="box"><div class="lbl">أشهر الأقساط المسجلة</div><div class="val">'+pc+' من '+ti+'</div></div>'+
       '<div class="box" style="background:'+(done?'#def7ec':'#fde8e8')+'">'+
         '<div class="lbl" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
@@ -1031,7 +1035,7 @@ function exportPDF(id){
     '</body></html>';
   var w=window.open('','_blank');
   if(w){w.document.write(html);w.document.close();}
-  else{alert('يرجى السماح بالنوافذ النوافذ المنبثقة في المتصفح');}
+  else{alert('يرجى السماح بالنوافذ المنبثقة في المتصفح');}
 }
 </script>
 </body>
