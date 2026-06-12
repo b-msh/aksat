@@ -95,7 +95,7 @@ tbody tr{border-bottom:1px solid #f3f4f6;transition:background .12s}
 tbody tr:hover{background:#f9fafb}
 td{padding:9px 10px;color:#374151;vertical-align:middle}
 .badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:700}
-.bpd{background:#def7ec;color:#057a55}.bup{background:#fde8e8;color:#c81e1e}.bpp{background:#e8f0fd;color:#1a56db}
+.bpd{background:#def7ec;color:#057a55}.bup{background:#fde8e8;color:#c81e1e}.bpp{background:#e8f0fd;color:#1a56db}.bskip{background:#f3f4f6;color:#6b7280}
 .pb{background:#e5e7eb;border-radius:10px;height:6px;overflow:hidden;width:75px}
 .pf{height:6px;border-radius:10px;background:#1a56db}
 .pf.dn{background:#057a55}
@@ -113,12 +113,14 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 .mg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
 .mi{border:1.5px solid #e5e7eb;border-radius:7px;padding:7px 8px;text-align:center;cursor:pointer;font-size:11px;transition:all .15s}
 .mi:hover{border-color:#1a56db}
-.mi.pd{background:#def7ec;border-color:#057a55}
-.mi.up2{background:#fde8e8;border-color:#c81e1e}
+.mi.pd {background:#def7ec;border-color:#057a55}
+.mi.up2 {background:#fde8e8;border-color:#c81e1e}
+.mi.skp {background:#f3f4f6;border-color:#d1d5db;cursor:not-allowed}
 .mn2{font-weight:700;color:#374151;font-size:12px}
 .ms3{font-weight:700}
 .mi.pd .ms3{color:#057a55}
 .mi.up2 .ms3{color:#c81e1e}
+.mi.skp .ms3{color:#6b7280}
 .mdt{font-size:10px;color:#9ca3af;margin-top:1px}
 .alert{padding:10px 13px;border-radius:7px;font-size:13px;font-weight:700;margin-bottom:12px;display:none}
 .alert.ok{background:#def7ec;color:#057a55;display:block}
@@ -313,7 +315,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
-<!-- MODAL PAYFLEX (نافذة الدفع المرن) -->
+<!-- MODAL PAYFLEX -->
 <div class="mo" id="mo-pf">
   <div class="md" style="max-width:380px">
     <div class="mh"><h2>💰 تسجيل قسط جديد - الدفع المرن</h2><button class="xb" onclick="closePayFlexMo()">✕</button></div>
@@ -344,9 +346,6 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 </div>
 
 <script type="module">
-// ══════════════════════════════════════════
-// إعدادات Firebase
-// ══════════════════════════════════════════
 const firebaseConfig = {
   apiKey: "AIzaSyBLvHk8vPo62uwr3McZiRV_npUQmL-TYLo",
   authDomain: "peaceful-2c4b1.firebaseapp.com",
@@ -355,12 +354,10 @@ const firebaseConfig = {
   messagingSenderId: "193542492901",
   appId: "1:193542492901:web:6a41387603ab63671cba0c"
 };
-// ══════════════════════════════════════════
 const ADMIN_EMAIL  = 'braamessi91@gmail.com';
 const EJS_SERVICE  = 'service_xmktiec';
 const EJS_TEMPLATE = 'template_abqwdfl';
 const EJS_KEY      = '1rdDi84FpMTcBtK-A';
-// ══════════════════════════════════════════
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
@@ -665,7 +662,6 @@ function rp() {
   updStats();
 }
 
-// ── نافذة الدفع المرن المحدثة للعمل من الصفحتين ──
 window.openPayFlexMo = function(id, ym, fromDetails) {
   var c = C.find(x => x.id === id); if(!c) return;
   var alreadyPaid = isPaid(c, ym);
@@ -683,7 +679,7 @@ window.openPayFlexMo = function(id, ym, fromDetails) {
     closePayFlexMo(); 
     rp(); 
     rc();
-    if(fromDetails) openDet(id); // إعادة تحميل واجهة التفاصيل لتعكس المبلغ الجديد فوراً
+    if(fromDetails) openDet(id);
   };
 };
 window.closePayFlexMo = function() { document.getElementById('mo-pf').className = 'mo'; };
@@ -795,23 +791,44 @@ window.clrF = function() {
 window.openDet = function(id) {
   var c=C.find(x=>x.id===id); if(!c) return;
   ACTIVE_DET_ID = id;
+  
+  var currentRem = remAmt(c);
+  var isFullyPaidAhead = currentRem <= 0; // فحص السداد المبكر الكلي
+  
   var pc=pCount(c);var ti=Number(c.inst);var prog=Math.min(100,Math.round(pc/ti*100));
-  var rem=remAmt(c);var done=rem<=0;
+  var done=isFullyPaidAhead;
   var mh='';
   var sd=new Date(c.start);
+  
   for(var i=0;i<ti;i++){
     var d=new Date(sd.getFullYear(),sd.getMonth()+i,1);
     var ym=d.getFullYear()+'-'+p2(d.getMonth()+1);
     var pd=c.pay&&c.pay[ym];
     var actualAmt = pd && pd.amt ? pd.amt : c.mon;
     
-    // عند الضغط يفتح حقل كتابة المبلغ المستلم التعديلي المرن
-    mh+='<div class="mi '+(pd?'pd':'up2')+'" onclick="openPayFlexMo(\''+esc(c.id)+'\',\''+esc(ym)+'\', true)">'+
-      '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
-      '<div class="ms3">'+(pd?'✅ مدفوع ('+fMoney(actualAmt)+')':'⏳ لم يدفع')+'</div>'+
-      (pd?'<div class="mdt">'+fDate(pd.dt)+'</div>':'')+
-      '</div>';
+    if (pd) {
+      // قسط مدفوع فعلياً
+      mh+='<div class="mi pd" onclick="openPayFlexMo(\''+esc(c.id)+'\',\''+esc(ym)+'\', true)">'+
+        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="ms3">✅ مدفوع ('+fMoney(actualAmt)+')</div>'+
+        '<div class="mdt">'+fDate(pd.dt)+'</div>'+
+        '</div>';
+    } else if (isFullyPaidAhead) {
+      // قسط غير مدفوع ولكن الحساب الكلي صفر (سداد مبكر زائد)
+      mh+='<div class="mi skp">'+
+        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="ms3">🔄 غير مطلوب</div>'+
+        '<div class="mdt">سداد مبكر</div>'+
+        '</div>';
+    } else {
+      // قسط متبقي عادي ومطلوب سداده
+      mh+='<div class="mi up2" onclick="openPayFlexMo(\''+esc(c.id)+'\',\''+esc(ym)+'\', true)">'+
+        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="ms3">⏳ لم يدفع</div>'+
+        '</div>';
+    }
   }
+  
   document.getElementById('mo-title').textContent='📋 '+c.name;
   document.getElementById('mo-body').innerHTML=
     '<div class="ig">'+
@@ -823,7 +840,7 @@ window.openDet = function(id) {
       '<div class="ib"><div class="il">تاريخ البداية</div><div class="iv">'+fDate(c.start)+'</div></div>'+
       '<div class="ib" style="background:'+(done?'#def7ec':'#fde8e8')+'">'+
         '<div class="il" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
-        '<div class="iv" style="color:'+(done?'#057a55':'#c81e1e')+'">'+(done?'✅ أكمل الدفع':fMoney(rem))+'</div></div>'+
+        '<div class="iv" style="color:'+(done?'#057a55':'#c81e1e')+'">'+(done?'✅ أكمل الدفع':fMoney(currentRem))+'</div></div>'+
     '</div>'+
     '<div style="margin-bottom:12px">'+
       '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:#6b7280">أشهر الأقساط المدفوعة</span><span style="font-weight:700;color:#1a56db">'+pc+'/'+ti+' ('+prog+'%)</span></div>'+
@@ -940,8 +957,18 @@ function exportPDF(id){
     var ym2=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
     var pd=c.pay&&c.pay[ym2];
     var actualAmt = pd && pd.amt ? pd.amt : c.mon;
+    
+    var statusText = '';
+    if(pd) {
+       statusText = '<b style="color:#057a55">✅ مدفوع ('+_fm(actualAmt)+')</b>';
+    } else if (done) {
+       statusText = '<b style="color:#6b7280">🔄 غير مطلوب (سداد مبكر)</b>';
+    } else {
+       statusText = '<b style="color:#c81e1e">⏳ لم يدفع</b>';
+    }
+    
     rows+='<tr><td>'+(i+1)+'</td><td>'+MN2[d.getMonth()]+' '+d.getFullYear()+'</td>'+
-      '<td>'+(pd?'<b style="color:#057a55">✅ مدفوع ('+_fm(actualAmt)+')</b>':'<b style="color:#c81e1e">⏳ لم يدفع</b>')+'</td>'+
+      '<td>'+statusText+'</td>'+
       '<td>'+(pd?_fd(pd.dt):'-')+'</td></tr>';
   }
   var html='<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>كشف حساب</title>'+
