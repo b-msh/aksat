@@ -137,8 +137,8 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 .rem.dn{color:#057a55}
 .exp-box{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:14px}
 .ex-card{border-radius:9px;padding:11px 13px}
-.ex-card.g{background:#def7ec;border:1px solid #bcf0da}
-.ex-card.r{background:#fde8e8;border:1px solid #fbd5d5}
+.ex-card.g"><div class="el">✅ دفعوا</div><div class="ev" id="pc-g">0 زبون</div></div>
+.ex-card r"><div class="el">⏳ لم يدفعوا</div><div class="ev" id="pc-r">0 زبون</div></div>
 .ex-card .el{font-size:11px;font-weight:700;margin-bottom:3px}
 .ex-card.g .el{color:#057a55}
 .ex-card.r .el{color:#c81e1e}
@@ -194,7 +194,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
       </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn bp bs" id="admin-enter-btn">📱 دخول كمستخدم</button>
+      <button class="btn bp" id="admin-enter-btn">📱 دخول كمستخدم</button>
       <button class="logout-btn" id="admin-logout-btn">خروج</button>
     </div>
   </div>
@@ -364,7 +364,6 @@ const auth = getAuth(app);
 const db   = getFirestore(app);
 
 let C = [], FIL = 'a', DEL_ID = null, currentUser = null, ACTIVE_DET_ID = null;
-window.C = C;
 const MN = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
 function uid(){ return 'c'+Date.now()+''+Math.floor(Math.random()*9999); }
@@ -407,7 +406,7 @@ function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')
 function hide(id){ document.getElementById(id).style.display='none'; }
 function show(id,d){ document.getElementById(id).style.display=d||'block'; }
 
-// ── ربط الأحداث المباشر لحل مشكلة عدم الاستجابة ──
+// ── ربط أحداث تسجيل الدخول المباشرة ──
 document.getElementById('google-login-btn').addEventListener('click', signInGoogle);
 document.getElementById('pending-signout-btn').addEventListener('click', signOut);
 document.getElementById('admin-logout-btn').addEventListener('click', signOut);
@@ -417,17 +416,16 @@ document.getElementById('admin-enter-btn').addEventListener('click', showAdminAp
 async function signInGoogle() {
   try {
     const provider = new GoogleAuthProvider();
-    // فرض نافذة اختيار الحساب لتلافي التعليق
     provider.setCustomParameters({ prompt: 'select_account' });
     await signInWithPopup(auth, provider);
   } catch(e) { 
-    alert('خطأ أثناء تسجيل الدخول: ' + e.message + '\nتأكد من تفعيل Google Auth في Firebase Console وإضافة النطاق (Domain) الخاص بك.'); 
+    alert('خطأ في الدخول: ' + e.message); 
   }
 }
 
 async function signOut() {
   await fbSignOut(auth);
-  C=[];
+  C=[]; window.__appData = [];
   hide('app'); hide('admin-page'); hide('pending-page');
   show('login-page','flex');
 }
@@ -533,7 +531,6 @@ async function loadRequests() {
     `;
   }).join('');
 
-  // ربط أحداث أزرار الإدارة ديناميكياً
   list.querySelectorAll('[data-approve]').forEach(btn => {
     btn.addEventListener('click', () => approveUser(btn.dataset.approve, btn.dataset.email));
   });
@@ -589,13 +586,13 @@ function initUI() {
   updStats(); rc();
 }
 
-window.sw = function(t) {
+function sw(t) {
   ['c','p','a'].forEach(x=>{
     document.getElementById('tab-'+x).style.display=x===t?'':'none';
     document.getElementById('tab-btn-'+x).className=x===t?'tb on':'tb';
   });
   if(t==='p') rp();
-};
+}
 
 function updStats() {
   var ym=document.getElementById('selm').value||curYM();
@@ -612,13 +609,13 @@ function updStats() {
   document.getElementById('s4').textContent=tot.toLocaleString()+' د.ع';
 }
 
-window.sf = function(f) {
+function sf(f) {
   FIL=f;
   document.getElementById('pi-a').className='pill'+(f==='a'?' pa':'');
   document.getElementById('pi-p').className='pill'+(f==='p'?' pp':'');
   document.getElementById('pi-u').className='pill'+(f==='u'?' pu':'');
   rc();
-};
+}
 
 function rc() {
   var ym=document.getElementById('selm').value||curYM();
@@ -661,7 +658,6 @@ function rc() {
     tb.appendChild(tr);
   });
 
-  // ربط الأحداث ديناميكياً لجدول الزبائن الرئيسي
   tb.querySelectorAll('[data-det]').forEach(b => b.addEventListener('click', () => openDet(b.dataset.det)));
   tb.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => startEdit(b.dataset.edit)));
   tb.querySelectorAll('[data-pdf]').forEach(b => b.addEventListener('click', () => exportPDF(b.dataset.pdf)));
@@ -684,6 +680,7 @@ function rp() {
     if(paid)pd++;else up++;
     var pdate=paid&&c.pay[ym]?c.pay[ym].dt:'';
     var actualAmt = paid&&c.pay[ym]&&c.pay[ym].amt ? c.pay[ym].amt : c.mon;
+    
     var rem=remAmt(c);var pcnt=pCount(c);var ri=Math.max(0,Number(c.inst)-pcnt);
     
     var waMsg=encodeURIComponent('السلام عليكم '+c.name+' 🌟\n\n✅ تم تسجيل دفعتك لشهر '+MN[Number(ym.split('-')[1])-1]+'\n• المبلغ المستلم: '+fMoney(actualAmt)+'\n\n📊 تفاصيل حسابك:\n• الجهاز: '+c.dev+'\n• الأقساط المدفوعة: '+pcnt+' من '+c.inst+'\n• الأقساط المتبقية: '+ri+' قسط\n• المبلغ المتبقي: '+fMoney(rem)+'\n\n'+(rem===0?'🎉 تهانينا! أكملت جميع الأقساط!':'📅 القسط القادم الافتراضي: '+fMoney(c.mon))+'\n\nشكراً لثقتكم 🙏');
@@ -700,7 +697,6 @@ function rp() {
     tb.appendChild(tr);
   });
 
-  // ربط أحداث المتابعة الشهرية
   tb.querySelectorAll('[data-payflex]').forEach(b => b.addEventListener('click', () => openPayFlexMo(b.dataset.payflex, ym, false)));
   tb.querySelectorAll('[data-unpaid]').forEach(b => b.addEventListener('click', () => unPaid(b.dataset.unpaid, ym)));
 
@@ -709,7 +705,7 @@ function rp() {
   updStats();
 }
 
-window.openPayFlexMo = function(id, ym, fromDetails) {
+function openPayFlexMo(id, ym, fromDetails) {
   var c = C.find(x => x.id === id); if(!c) return;
   var alreadyPaid = isPaid(c, ym);
   
@@ -728,8 +724,9 @@ window.openPayFlexMo = function(id, ym, fromDetails) {
     rc();
     if(fromDetails) openDet(id);
   };
-};
-window.closePayFlexMo = function() { document.getElementById('mo-pf').className = 'mo'; };
+}
+
+function closePayFlexMo() { document.getElementById('mo-pf').className = 'mo'; }
 
 async function unPaid(id,ym) {
   var c=C.find(x=>x.id===id); if(!c||!c.pay) return;
@@ -738,7 +735,7 @@ async function unPaid(id,ym) {
   if(ACTIVE_DET_ID === id) openDet(id);
 }
 
-window.calc = function() {
+function calc() {
   var t=Number(document.getElementById('ft').value);
   var down=Number(document.getElementById('fdown').value) || 0;
   var ii=Number(document.getElementById('fi2').value);
@@ -752,9 +749,9 @@ window.calc = function() {
     pv.innerHTML='💡 حساب الأقساط: السعر الكلي المتنزل منه المقدمة هو <strong>'+base.toLocaleString()+' د.ع</strong> المتبقي مقسم على '+ii+' أشهر بقسط ثابت قيمته: <strong>'+m.toLocaleString()+' د.ع</strong> شهرياً'; 
   }
   else pv.style.display='none';
-};
+}
 
-window.addC = async function() {
+async function addC() {
   var name=(document.getElementById('fn').value||'').trim();
   var phone=(document.getElementById('fp').value||'').trim();
   var dev=(document.getElementById('fd').value||'').trim();
@@ -798,9 +795,9 @@ window.addC = async function() {
   window.__appData = C;
   updStats(); rc();
   setTimeout(()=>{al.className='alert';},4000);
-};
+}
 
-window.startEdit = function(id) {
+function startEdit(id) {
   var c = C.find(x => x.id === id); if(!c) return;
   document.getElementById('edit-id').value = c.id;
   document.getElementById('fn').value = c.name;
@@ -821,25 +818,25 @@ window.startEdit = function(id) {
   
   calc();
   sw('a');
-};
+}
 
-window.resetToCreate = function() {
+function resetToCreate() {
   document.getElementById('edit-id').value = '';
   document.getElementById('form-title').textContent = '➕ إضافة زبون جديد';
   document.getElementById('save-btn').textContent = '💾 حفظ الزبون';
   document.getElementById('cancel-edit-btn').style.display = 'none';
   document.getElementById('clear-btn').style.display = 'inline-flex';
   clrF();
-};
+}
 
-window.clrF = function() {
+function clrF() {
   ['fn','fp','fd','ft','fdown','fi2','fm','fo'].forEach(id=>{document.getElementById(id).value='';});
   document.getElementById('fs').value=today();
   document.getElementById('fbuy').value=today();
   document.getElementById('prev').style.display='none';
-};
+}
 
-window.openDet = function(id) {
+function openDet(id) {
   var c=C.find(x=>x.id===id); if(!c) return;
   ACTIVE_DET_ID = id;
   
@@ -851,27 +848,41 @@ window.openDet = function(id) {
   var mh='';
   var sd = new Date(c.start);
   
+  // الاحتفاظ باليوم الرئيسي المدخل بالبداية لتفادي مشكلة ترحيل الأيام (مثلاً نهاية الأشهر)
+  var originalDay = sd.getDate();
+  
   for(var i=0;i<ti;i++){
-    var d=new Date(sd.getFullYear(),sd.getMonth()+i,1);
+    // حساب تاريخ الاستحقاق الدقيق لكل قسط شهرياً بشكل سليم مع الحفاظ على يوم الاستحقاق
+    var d = new Date(sd.getFullYear(), sd.getMonth() + i, originalDay);
+    
+    // إذا تغير الشهر بسبب تجاوز عدد الأيام (مثال قسط يوم 31 في شهر فبراير)، نقوم بضبطه لآخر يوم في الشهر المقصود
+    var targetMonth = (sd.getMonth() + i) % 12;
+    if (d.getMonth() !== targetMonth) {
+      d = new Date(sd.getFullYear(), sd.getMonth() + i + 1, 0);
+    }
+
     var ym=d.getFullYear()+'-'+p2(d.getMonth()+1);
     var pd=c.pay&&c.pay[ym];
     var actualAmt = pd && pd.amt ? pd.amt : c.mon;
     
+    // تنسيق وعرض التاريخ الدقيق للاستحقاق (يوم/شهر/سنة)
+    var dueFullDateStr = d.getDate() + ' ' + MN[d.getMonth()] + ' ' + d.getFullYear();
+    
     if (pd) {
       mh+=`<div class="mi pd" data-mdpf="${esc(c.id)}" data-mdym="${esc(ym)}">`+
-        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="mn2">'+dueFullDateStr+'</div>'+
         '<div class="ms3">✅ مدفوع ('+fMoney(actualAmt)+')</div>'+
         '<div class="mdt">'+fDate(pd.dt)+'</div>'+
         '</div>';
     } else if (isFullyPaidAhead) {
       mh+='<div class="mi skp">'+
-        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="mn2">'+dueFullDateStr+'</div>'+
         '<div class="ms3">🔄 غير مطلوب</div>'+
         '<div class="mdt">سداد مبكر</div>'+
         '</div>';
     } else {
       mh+=`<div class="mi up2" data-mdpf="${esc(c.id)}" data-mdym="${esc(ym)}">`+
-        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="mn2">'+dueFullDateStr+'</div>'+
         '<div class="ms3">⏳ لم يدفع</div>'+
         '</div>';
     }
@@ -901,17 +912,16 @@ window.openDet = function(id) {
     '<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#374151">📅 سجل الأشهر (اضغط لتسجيل قسط جديد أو تعديل قيمة المبلغ المدفوع)</div>'+
     '<div class="mg">'+mh+'</div>';
 
-  // ربط الأحداث لبطاقات سجل الأشهر داخل المودال
   bodyContainer.querySelectorAll('[data-mdpf]').forEach(b => {
     b.addEventListener('click', () => openPayFlexMo(b.dataset.mdpf, b.dataset.mdym, true));
   });
 
   document.getElementById('mo-d').className='mo open';
-};
+}
 
-window.closeMo = function(){ document.getElementById('mo-d').className='mo'; ACTIVE_DET_ID = null; };
+function closeMo() { document.getElementById('mo-d').className='mo'; ACTIVE_DET_ID = null; }
 
-window.askDel = function(id) {
+function askDel(id) {
   DEL_ID=id;
   document.getElementById('mo-del').className='mo open';
   document.getElementById('del-btn').onclick=async function(){
@@ -920,10 +930,10 @@ window.askDel = function(id) {
     await deleteFromFirestore(DEL_ID);
     updStats(); rc(); closeDelMo();
   };
-};
-window.closeDelMo = function(){ document.getElementById('mo-del').className='mo'; DEL_ID=null; };
+}
+function closeDelMo(){ document.getElementById('mo-del').className='mo'; DEL_ID=null; }
 
-window.expUnpaid = function() {
+function expUnpaid() {
   var ym=document.getElementById('selm').value||curYM();
   var p=ym.split('-');var mn=MN[Number(p[1])-1]+' '+p[0];
   var up=C.filter(c=>!isPaid(c,ym) && isDue(c, ym));
@@ -936,20 +946,28 @@ window.expUnpaid = function() {
   var a=document.createElement('a');
   a.href=u;a.download='متأخري_'+mn+'.txt';
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
-};
+}
+
+// ── إسناد الدوال إلى window لتعمل مع الـ HTML ──
+window.sw = sw;
+window.sf = sf;
+window.rc = rc;
+window.rp = rp;
+window.calc = calc;
+window.addC = addC;
+window.startEdit = startEdit;
+window.resetToCreate = resetToCreate;
+window.clrF = clrF;
+window.openDet = openDet;
+window.closeMo = closeMo;
+window.closeDelMo = closeDelMo;
+window.closePayFlexMo = closePayFlexMo;
+window.openPayFlexMo = openPayFlexMo;
+window.expUnpaid = expUnpaid;
 
 document.getElementById('mo-d').addEventListener('click',e=>{if(e.target===document.getElementById('mo-d'))closeMo();});
 document.getElementById('mo-del').addEventListener('click',e=>{if(e.target===document.getElementById('mo-del'))closeDelMo();});
 document.getElementById('mo-pf').addEventListener('click',e=>{if(e.target===document.getElementById('mo-pf'))closePayFlexMo();});
-
-window._getC    = () => C;
-window._isPaid  = isPaid;
-window._pCount  = pCount;
-window._remAmt  = remAmt;
-window._fDate   = fDate;
-window._fMoney  = fMoney;
-window._curYM   = curYM;
-window._MN      = MN;
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -1022,8 +1040,13 @@ function exportPDF(id){
   var rem=_rem(c);var done=rem<=0;
   var rows='';
   var sd=new Date(c.start);
+  var originalDay = sd.getDate();
   for(var i=0;i<ti;i++){
-    var d=new Date(sd.getFullYear(),sd.getMonth()+i,1);
+    var d = new Date(sd.getFullYear(), sd.getMonth() + i, originalDay);
+    var targetMonth = (sd.getMonth() + i) % 12;
+    if (d.getMonth() !== targetMonth) {
+      d = new Date(sd.getFullYear(), sd.getMonth() + i + 1, 0);
+    }
     var ym2=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
     var pd=c.pay&&c.pay[ym2];
     var actualAmt = pd && pd.amt ? pd.amt : c.mon;
@@ -1037,7 +1060,9 @@ function exportPDF(id){
        statusText = '<b style="color:#c81e1e">⏳ لم يدفع</b>';
     }
     
-    rows+='<tr><td>'+(i+1)+'</td><td>'+MN2[d.getMonth()]+' '+d.getFullYear()+'</td>'+
+    var dueFullDateStr = d.getDate() + ' ' + MN2[d.getMonth()] + ' ' + d.getFullYear();
+    
+    rows+='<tr><td>'+(i+1)+'</td><td>'+dueFullDateStr+'</td>'+
       '<td>'+statusText+'</td>'+
       '<td>'+(pd?_fd(pd.dt):'-')+'</td></tr>';
   }
@@ -1067,7 +1092,7 @@ function exportPDF(id){
         '<div class="lbl" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
         '<div class="val" style="color:'+(done?'#057a55':'#c81e1e')+'">'+(done?'✅ أكمل الدفع':_rem(c))+'</div></div>'+
     '</div>'+
-    '<table><thead><tr><th>#</th><th>الشهر</th><th>الحالة والمدفوع</th><th>تاريخ الدفع</th></tr></thead>'+
+    '<table><thead><tr><th>#</th><th>الشهر والتاريخ المستهدف</th><th>الحالة والمدفوع</th><th>تاريخ الدفع</th></tr></thead>'+
     '<tbody>'+rows+'</tbody></table>'+
     '<div class="footer">نظام إدارة الأقساط</div>'+
     '<br><button class="noprint" onclick="window.print()" style="padding:9px 20px;background:#1a56db;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer">🖨️ طباعة / حفظ PDF</button>'+
@@ -1076,6 +1101,9 @@ function exportPDF(id){
   if(w){w.document.write(html);w.document.close();}
   else{alert('يرجى السماح بالنوافذ المنبثقة في المتصفح');}
 }
+window.exportExcelAll = exportExcelAll;
+window.exportMonthExcel = exportMonthExcel;
+window.exportPDF = exportPDF;
 </script>
 </body>
 </html>
