@@ -272,4 +272,810 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
           <thead><tr><th>#</th><th>اسم الزبون</th><th>رقم الهاتف</th><th>مبلغ القسط الرئيسي</th><th>الحالة</th><th>تاريخ الدفع</th><th>تسجيل</th><th>واتساب</th></tr></thead>
           <tbody id="ptb"></tbody>
         </table>
-        <div id="emp-p" class="emp" style="display:none"><div class="ei
+        <div id="emp-p" class="emp" style="display:none"><div class="ei">📭</div><p>لا يوجد زبائن بعد</p></div>
+      </div>
+    </div>
+  </div>
+  <div id="tab-a" style="display:none">
+    <div class="card">
+      <div class="ct" id="form-title">➕ إضافة زبون جديد</div>
+      <div id="add-alert" class="alert"></div>
+      <input type="hidden" id="edit-id">
+      <div class="fg">
+        <div class="fi"><label>👤 اسم الزبون *</label><input type="text" id="fn" placeholder="مثال: أحمد محمد"></div>
+        <div class="fi"><label>📞 رقم الهاتف (مع رمز الدولة) *</label><input type="text" id="fp" placeholder="9647XXXXXXXXX"></div>
+        <div class="fi"><label>📱 نوع الجهاز *</label><input type="text" id="fd" placeholder="مثال: Samsung A55"></div>
+        <div class="fi"><label>💵 السعر الكلي للجهاز (دينار) *</label><input type="number" id="ft" placeholder="مثال: 1000000" oninput="calc()"></div>
+        <div class="fi"><label>💰 مبلغ المقدمة (إن وجد)</label><input type="number" id="fdown" placeholder="مثال: 250000" oninput="calc()"></div>
+        <div class="fi"><label>📊 عدد الأقساط (الأشهر) *</label><input type="number" id="fi2" placeholder="مثال: 12" oninput="calc()"></div>
+        <div class="fi"><label>💸 القسط الشهري الثابت</label><input type="number" id="fm" placeholder="يحسب تلقائياً" readonly style="background:#e5e7eb"></div>
+        <div class="fi"><label>📝 تاريخ توقيع العقد (الشراء) *</label><input type="date" id="fbuy"></div>
+        <div class="fi"><label>📅 تاريخ أول قسط (الاستحقاق) *</label><input type="date" id="fs"></div>
+        <div class="fi" style="grid-column: span 2"><label>📝 ملاحظات</label><input type="text" id="fo" placeholder="أي ملاحظة..."></div>
+      </div>
+      <div class="prev" id="prev"></div>
+      <div style="margin-top:13px;display:flex;gap:8px">
+        <button class="btn bp" id="save-btn" onclick="addC()">💾 حفظ الزبون</button>
+        <button class="btn bo" id="cancel-edit-btn" onclick="resetToCreate()" style="display:none">↩ إلغاء التعديل</button>
+        <button class="btn bo" id="clear-btn" onclick="clrF()">🔄 مسح الحقول</button>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="mo" id="mo-d">
+  <div class="md">
+    <div class="mh"><h2 id="mo-title">تفاصيل الزبون</h2><button class="xb" onclick="closeMo()">✕</button></div>
+    <div id="mo-body"></div>
+  </div>
+</div>
+
+<div class="mo" id="mo-pf">
+  <div class="md" style="max-width:380px">
+    <div class="mh"><h2>💰 تسجيل قسط جديد - الدفع المرن</h2><button class="xb" onclick="closePayFlexMo()">✕</button></div>
+    <div style="margin-bottom:12px">
+      <p style="font-size:13px;color:#4b5563" id="pf-info-text"></p>
+    </div>
+    <div class="fi" style="margin-bottom:16px">
+      <label>المبلغ المستلم فعلياً (د.ع) *</label>
+      <input type="number" id="pf-amount" placeholder="أدخل المبلغ المستلم">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn bg" id="pf-save-btn">💾 حفظ الدفعة</button>
+      <button class="btn bo" onclick="closePayFlexMo()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="mo-del">
+  <div class="md" style="max-width:360px">
+    <div class="mh"><h2>⚠️ تأكيد الحذف</h2><button class="xb" onclick="closeDelMo()">✕</button></div>
+    <p style="color:#6b7280;font-size:13px;margin-bottom:16px">هل أنت متأكد من حذف بيانات هذا الزبون؟</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn bd" id="del-btn">حذف</button>
+      <button class="btn bo" onclick="closeDelMo()">إلغاء</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+const firebaseConfig = {
+  apiKey: "AIzaSyBLvHk8vPo62uwr3McZiRV_npUQmL-TYLo",
+  authDomain: "peaceful-2c4b1.firebaseapp.com",
+  projectId: "peaceful-2c4b1",
+  storageBucket: "peaceful-2c4b1.firebasestorage.app",
+  messagingSenderId: "193542492901",
+  appId: "1:193542492901:web:6a41387603ab63671cba0c"
+};
+const ADMIN_EMAIL  = 'braamessi91@gmail.com';
+const EJS_SERVICE  = 'service_xmktiec';
+const EJS_TEMPLATE = 'template_abqwdfl';
+const EJS_KEY      = '1rdDi84FpMTcBtK-A';
+
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut as fbSignOut }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getFirestore(app);
+
+let C = [], FIL = 'a', DEL_ID = null, currentUser = null, ACTIVE_DET_ID = null;
+window.C = C;
+const MN = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function uid(){ return 'c'+Date.now()+''+Math.floor(Math.random()*9999); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+function curYM(){ var d=new Date(); return d.getFullYear()+'-'+p2(d.getMonth()+1); }
+function p2(n){ return n<10?'0'+n:''+n; }
+function fDate(s){ if(!s||s==='-') return '-'; var p=s.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+function fMoney(n){ if(!n&&n!==0) return '0'; return Number(n).toLocaleString()+' د.ع'; }
+
+function totPaidAmts(c){
+  if(!c.pay) return 0;
+  var sum = 0;
+  Object.keys(c.pay).forEach(k => { sum += Number(c.pay[k].amt || c.mon); });
+  return sum;
+}
+
+function isPaid(c,ym){ return !!(c.pay&&c.pay[ym]); }
+function pCount(c){ return c.pay?Object.keys(c.pay).length:0; }
+
+function isDue(c, ym) {
+  if(!c.start) return true;
+  var target = ym.split('-');
+  var start = c.start.split('-');
+  var tY = Number(target[0]), tM = Number(target[1]);
+  var sY = Number(start[0]), sM = Number(start[1]), sD = Number(start[2]);
+  if (tY < sY || (tY === sY && tM < sM)) return false;
+  var now = new Date();
+  var curY = now.getFullYear(), curM = now.getMonth() + 1, curD = now.getDate();
+  if (tY === curY && tM === curM) { return curD >= sD; }
+  return true;
+}
+
+function remAmt(c){ 
+  var base = Number(c.tot) - (Number(c.down) || 0);
+  var r = base - totPaidAmts(c);
+  return r > 0 ? r : 0; 
+}
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function hide(id){ document.getElementById(id).style.display='none'; }
+function show(id,d){ document.getElementById(id).style.display=d||'block'; }
+
+// ── ربط الأحداث المباشر لحل مشكلة عدم الاستجابة ──
+document.getElementById('google-login-btn').addEventListener('click', signInGoogle);
+document.getElementById('pending-signout-btn').addEventListener('click', signOut);
+document.getElementById('admin-logout-btn').addEventListener('click', signOut);
+document.getElementById('app-logout-btn').addEventListener('click', signOut);
+document.getElementById('admin-enter-btn').addEventListener('click', showAdminApp);
+
+async function signInGoogle() {
+  try {
+    const provider = new GoogleAuthProvider();
+    // فرض نافذة اختيار الحساب لتلافي التعليق
+    provider.setCustomParameters({ prompt: 'select_account' });
+    await signInWithPopup(auth, provider);
+  } catch(e) { 
+    alert('خطأ أثناء تسجيل الدخول: ' + e.message + '\nتأكد من تفعيل Google Auth في Firebase Console وإضافة النطاق (Domain) الخاص بك.'); 
+  }
+}
+
+async function signOut() {
+  await fbSignOut(auth);
+  C=[];
+  hide('app'); hide('admin-page'); hide('pending-page');
+  show('login-page','flex');
+}
+
+// ── AUTH STATE ──
+onAuthStateChanged(auth, async (user) => {
+  hide('app'); hide('admin-page'); hide('pending-page'); hide('login-page');
+  if (!user) { show('login-page','flex'); return; }
+  currentUser = user;
+
+  if (user.email === ADMIN_EMAIL) {
+    show('admin-page','block');
+    loadRequests();
+    return;
+  }
+
+  const uref = doc(db, 'access_requests', user.uid);
+  const usnap = await getDoc(uref);
+
+  if (!usnap.exists()) {
+    await setDoc(uref, {
+      uid: user.uid,
+      email: user.email,
+      name: user.displayName || '',
+      photo: user.photoURL || '',
+      status: 'pending',
+      requestedAt: Date.now()
+    });
+    try {
+      await fetch('https://api.emailjs.com/api/v1.0/email/send', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+          service_id: EJS_SERVICE,
+          template_id: EJS_TEMPLATE,
+          user_id: EJS_KEY,
+          template_params: {
+            from_name: user.displayName || 'مجهول',
+            from_email: user.email,
+            date: new Date().toLocaleDateString('ar-IQ')
+          }
+        })
+      });
+    } catch(e){ console.log('Email error:', e); }
+    document.getElementById('pending-email').textContent = user.email;
+    show('pending-page','flex');
+    return;
+  }
+
+  const data = usnap.data();
+  if (data.status === 'approved') {
+    document.getElementById('user-name').textContent = user.displayName || user.email;
+    document.getElementById('user-photo').src = user.photoURL || '';
+    show('app','block');
+    await loadFromFirestore();
+    initUI();
+  } else if (data.status === 'rejected') {
+    await fbSignOut(auth);
+    alert('❌ تم رفض طلب الوصول الخاص بك. تواصل مع المدير.');
+    show('login-page','flex');
+  } else {
+    document.getElementById('pending-email').textContent = user.email;
+    show('pending-page','flex');
+  }
+});
+
+// ── ADMIN ──
+async function loadRequests() {
+  const snap = await getDocs(collection(db, 'access_requests'));
+  const reqs = [];
+  snap.forEach(d => reqs.push({id: d.id, ...d.data()}));
+  reqs.sort((a,b) => (b.requestedAt||0)-(a.requestedAt||0));
+
+  document.getElementById('req-count').textContent = reqs.length;
+  const list = document.getElementById('req-list');
+
+  if (!reqs.length) {
+    list.innerHTML = '<div class="emp"><div class="ei">📭</div><p>لا توجد طلبات بعد</p></div>';
+    return;
+  }
+
+  list.innerHTML = reqs.map(r => {
+    const d = new Date(r.requestedAt||0);
+    const dateStr = d.getDate()+'/'+(d.getMonth()+1)+'/'+d.getFullYear();
+    const statusHtml =
+      r.status==='approved' ? '<span class="approved-badge">✅ مقبول</span>' :
+      r.status==='rejected' ? '<span class="rejected-badge">❌ مرفوض</span>' :
+      '<span class="pending-badge">⏳ قيد الانتظار</span>';
+    return `
+      <div class="req-card">
+        <div style="display:flex;align-items:center;gap:10px;flex:1">
+          ${r.photo ? `<img src="${r.photo}" style="width:36px;height:36px;border-radius:50%;border:1.5px solid #e5e7eb">` : '<div style="width:36px;height:36px;border-radius:50%;background:#e8f0fd;display:flex;align-items:center;justify-content:center;font-size:16px">👤</div>'}
+          <div class="req-info">
+            <div class="req-email">${esc(r.name||'')} ${r.name?'—':''} ${esc(r.email)}</div>
+            <div class="req-date">📅 ${dateStr} &nbsp; ${statusHtml}</div>
+          </div>
+        </div>
+        <div class="req-actions">
+          <button class="btn bg bs" data-approve="${r.id}" data-email="${esc(r.email)}">✅ قبول</button>
+          <button class="btn bd bs" data-reject="${r.id}">❌ رفض</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // ربط أحداث أزرار الإدارة ديناميكياً
+  list.querySelectorAll('[data-approve]').forEach(btn => {
+    btn.addEventListener('click', () => approveUser(btn.dataset.approve, btn.dataset.email));
+  });
+  list.querySelectorAll('[data-reject]').forEach(btn => {
+    btn.addEventListener('click', () => rejectUser(btn.dataset.reject));
+  });
+}
+
+async function approveUser(uid, email) {
+  await updateDoc(doc(db, 'access_requests', uid), {status: 'approved'});
+  alert('✅ تم قبول '+email+' بنجاح!');
+  loadRequests();
+}
+async function rejectUser(uid) {
+  await updateDoc(doc(db, 'access_requests', uid), {status: 'rejected'});
+  loadRequests();
+}
+function showAdminApp() {
+  hide('admin-page');
+  document.getElementById('user-name').textContent = 'المدير';
+  document.getElementById('user-photo').src = currentUser.photoURL||'';
+  show('app','block');
+  loadFromFirestore().then(()=>initUI());
+}
+
+// ── FIRESTORE ──
+async function loadFromFirestore() {
+  if(!db||!currentUser) return;
+  try {
+    show('load-c','block');
+    const snap = await getDocs(collection(db,'users',currentUser.uid,'customers'));
+    C=[];
+    snap.forEach(d => C.push({id:d.id,...d.data()}));
+    C.sort((a,b)=>(b.createdAt||0)-(a.createdAt||0));
+    window.__appData = C;
+  } catch(e){ console.error(e); }
+  finally{ hide('load-c'); }
+}
+
+async function saveToFirestore(cu) {
+  try{ await setDoc(doc(db,'users',currentUser.uid,'customers',cu.id),cu); }catch(e){console.error(e);}
+}
+
+async function deleteFromFirestore(id) {
+  try{ await deleteDoc(doc(db,'users',currentUser.uid,'customers',id)); }catch(e){console.error(e);}
+}
+
+// ── INIT UI ──
+function initUI() {
+  document.getElementById('selm').value = curYM();
+  document.getElementById('fbuy').value = today();
+  document.getElementById('fs').value = today();
+  updStats(); rc();
+}
+
+window.sw = function(t) {
+  ['c','p','a'].forEach(x=>{
+    document.getElementById('tab-'+x).style.display=x===t?'':'none';
+    document.getElementById('tab-btn-'+x).className=x===t?'tb on':'tb';
+  });
+  if(t==='p') rp();
+};
+
+function updStats() {
+  var ym=document.getElementById('selm').value||curYM();
+  var pd=0,up=0,tot=0;
+  C.forEach(c=>{ 
+    if(isDue(c, ym)) {
+      if(isPaid(c,ym)) pd++; else up++; 
+      tot+=Number(c.mon)||0; 
+    }
+  });
+  document.getElementById('s1').textContent=C.length;
+  document.getElementById('s2').textContent=pd;
+  document.getElementById('s3').textContent=up;
+  document.getElementById('s4').textContent=tot.toLocaleString()+' د.ع';
+}
+
+window.sf = function(f) {
+  FIL=f;
+  document.getElementById('pi-a').className='pill'+(f==='a'?' pa':'');
+  document.getElementById('pi-p').className='pill'+(f==='p'?' pp':'');
+  document.getElementById('pi-u').className='pill'+(f==='u'?' pu':'');
+  rc();
+};
+
+function rc() {
+  var ym=document.getElementById('selm').value||curYM();
+  var q=(document.getElementById('srch').value||'').toLowerCase();
+  var rows=C.filter(c=>{
+    var ms=!q||c.name.toLowerCase().includes(q)||(c.phone||'').includes(q)||(c.dev||'').toLowerCase().includes(q);
+    var paid=isPaid(c,ym);
+    var due=isDue(c,ym);
+    var mf=FIL==='a'||(FIL==='p'&&paid)||(FIL==='u'&&!paid&&due);
+    return ms&&mf;
+  });
+  var tb=document.getElementById('ctb');
+  tb.innerHTML='';
+  document.getElementById('emp-c').style.display=rows.length?'none':'block';
+  rows.forEach((c,i)=>{
+    var paid=isPaid(c,ym);
+    var due=isDue(c,ym);
+    var pc=pCount(c);var ti=Number(c.inst)||1;
+    var prog=Math.min(100,Math.round(pc/ti*100));
+    var rem=remAmt(c);var done=rem<=0;
+    var tr=document.createElement('tr');
+    
+    var badgeHtml = !due ? '<span class="badge bskp">🔄 لم يحن يوم استحقاقه بعد</span>' : (paid?'<span class="badge bpd">✅ دفع</span>':'<span class="badge bup">⏳ لم يدفع</span>');
+    
+    tr.innerHTML='<td>'+(i+1)+'</td>'+
+      '<td style="font-weight:700;color:#1f2937">'+esc(c.name)+'</td>'+
+      '<td style="direction:ltr;text-align:right;font-size:12px">'+esc(c.phone||'')+'</td>'+
+      '<td>'+esc(c.dev||'-')+'</td>'+
+      '<td>'+fMoney(c.mon)+'</td>'+
+      '<td class="rem'+(done?' dn':'')+'">'+(done?'✅ مكتمل':fMoney(rem))+'</td>'+
+      '<td><div class="pb"><div class="pf'+(done?' dn':'')+'" style="width:'+prog+'%"></div></div><div class="pt">'+pc+'/'+ti+'</div></td>'+
+      '<td>'+badgeHtml+'</td>'+
+      '<td><div style="display:flex;gap:5px">'+
+        '<button class="btn bp bs" data-det="'+esc(c.id)+'">📋 تفاصيل</button>'+
+        '<button class="btn by bs" data-edit="'+esc(c.id)+'">✏️ تعديل</button>'+
+        '<button class="btn bg bs" data-pdf="'+esc(c.id)+'">🧾 PDF</button>'+
+        '<button class="btn bd bs" data-del="'+esc(c.id)+'">🗑</button>'+
+      '</div></td>';
+    tr.style.opacity = due ? '1' : '0.65';
+    tb.appendChild(tr);
+  });
+
+  // ربط الأحداث ديناميكياً لجدول الزبائن الرئيسي
+  tb.querySelectorAll('[data-det]').forEach(b => b.addEventListener('click', () => openDet(b.dataset.det)));
+  tb.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => startEdit(b.dataset.edit)));
+  tb.querySelectorAll('[data-pdf]').forEach(b => b.addEventListener('click', () => exportPDF(b.dataset.pdf)));
+  tb.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', () => askDel(b.dataset.del)));
+
+  updStats();
+}
+
+function rp() {
+  var ym=document.getElementById('selm').value||curYM();
+  var tb=document.getElementById('ptb');
+  tb.innerHTML='';
+  
+  var dueCustomers = C.filter(c => isDue(c, ym));
+  document.getElementById('emp-p').style.display=dueCustomers.length?'none':'block';
+  var pd=0,up=0;
+  
+  dueCustomers.forEach((c,i)=>{
+    var paid=isPaid(c,ym);
+    if(paid)pd++;else up++;
+    var pdate=paid&&c.pay[ym]?c.pay[ym].dt:'';
+    var actualAmt = paid&&c.pay[ym]&&c.pay[ym].amt ? c.pay[ym].amt : c.mon;
+    var rem=remAmt(c);var pcnt=pCount(c);var ri=Math.max(0,Number(c.inst)-pcnt);
+    
+    var waMsg=encodeURIComponent('السلام عليكم '+c.name+' 🌟\n\n✅ تم تسجيل دفعتك لشهر '+MN[Number(ym.split('-')[1])-1]+'\n• المبلغ المستلم: '+fMoney(actualAmt)+'\n\n📊 تفاصيل حسابك:\n• الجهاز: '+c.dev+'\n• الأقساط المدفوعة: '+pcnt+' من '+c.inst+'\n• الأقساط المتبقية: '+ri+' قسط\n• المبلغ المتبقي: '+fMoney(rem)+'\n\n'+(rem===0?'🎉 تهانينا! أكملت جميع الأقساط!':'📅 القسط القادم الافتراضي: '+fMoney(c.mon))+'\n\nشكراً لثقتكم 🙏');
+    var waPhone=(c.phone||'').replace(/[^0-9]/g,'');
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td>'+(i+1)+'</td>'+
+      '<td style="font-weight:700">'+esc(c.name)+'</td>'+
+      '<td style="direction:ltr;text-align:right;font-size:12px">'+esc(c.phone||'')+'</td>'+
+      '<td>'+(paid ? `<span class="badge bpp">${fMoney(actualAmt)}</span>` : fMoney(c.mon))+'</td>'+
+      '<td><span class="badge '+(paid?'bpd':'bup')+'">'+(paid?'✅ دفع':'⏳ لم يدفع')+'</span></td>'+
+      '<td>'+(pdate?fDate(pdate):'-')+'</td>'+
+      '<td>'+(!paid?`<button class="btn bg bs" data-payflex="${esc(c.id)}">✅ تسجيل دفع</button>`:`<button class="btn bo bs" data-unpaid="${esc(c.id)}">↩ إلغاء</button>`)+'</td>'+
+      '<td><a class="btn bw bs" href="https://wa.me/'+waPhone+'?text='+waMsg+'" target="_blank">💬 واتساب</a></td>';
+    tb.appendChild(tr);
+  });
+
+  // ربط أحداث المتابعة الشهرية
+  tb.querySelectorAll('[data-payflex]').forEach(b => b.addEventListener('click', () => openPayFlexMo(b.dataset.payflex, ym, false)));
+  tb.querySelectorAll('[data-unpaid]').forEach(b => b.addEventListener('click', () => unPaid(b.dataset.unpaid, ym)));
+
+  document.getElementById('pc-g').textContent=pd+' زبون';
+  document.getElementById('pc-r').textContent=up+' زبون';
+  updStats();
+}
+
+window.openPayFlexMo = function(id, ym, fromDetails) {
+  var c = C.find(x => x.id === id); if(!c) return;
+  var alreadyPaid = isPaid(c, ym);
+  
+  document.getElementById('pf-info-text').innerHTML = `الزبون: <b>${esc(c.name)}</b><br>الشهر المستهدف: <b>${ym}</b><br>القسط الافتراضي الثابت: <b>${fMoney(c.mon)}</b>`;
+  document.getElementById('pf-amount').value = alreadyPaid ? c.pay[ym].amt : c.mon;
+  document.getElementById('mo-pf').className = 'mo open';
+  
+  document.getElementById('pf-save-btn').onclick = async function() {
+    var inputAmt = Number(document.getElementById('pf-amount').value);
+    if(!inputAmt || inputAmt <= 0) { alert('الرجاء إدخل مبلغ صحيح'); return; }
+    if(!c.pay) c.pay = {};
+    c.pay[ym] = { dt: today(), amt: inputAmt };
+    await saveToFirestore(c);
+    closePayFlexMo(); 
+    rp(); 
+    rc();
+    if(fromDetails) openDet(id);
+  };
+};
+window.closePayFlexMo = function() { document.getElementById('mo-pf').className = 'mo'; };
+
+async function unPaid(id,ym) {
+  var c=C.find(x=>x.id===id); if(!c||!c.pay) return;
+  delete c.pay[ym];
+  await saveToFirestore(c); rp(); rc();
+  if(ACTIVE_DET_ID === id) openDet(id);
+}
+
+window.calc = function() {
+  var t=Number(document.getElementById('ft').value);
+  var down=Number(document.getElementById('fdown').value) || 0;
+  var ii=Number(document.getElementById('fi2').value);
+  var pv=document.getElementById('prev');
+  
+  var base = t - down;
+  if(t>0 && ii>0){ 
+    var m=Math.ceil(base/ii); 
+    document.getElementById('fm').value=m; 
+    pv.style.display='block'; 
+    pv.innerHTML='💡 حساب الأقساط: السعر الكلي المتنزل منه المقدمة هو <strong>'+base.toLocaleString()+' د.ع</strong> المتبقي مقسم على '+ii+' أشهر بقسط ثابت قيمته: <strong>'+m.toLocaleString()+' د.ع</strong> شهرياً'; 
+  }
+  else pv.style.display='none';
+};
+
+window.addC = async function() {
+  var name=(document.getElementById('fn').value||'').trim();
+  var phone=(document.getElementById('fp').value||'').trim();
+  var dev=(document.getElementById('fd').value||'').trim();
+  var tot=document.getElementById('ft').value;
+  var down=document.getElementById('fdown').value || 0;
+  var inst=document.getElementById('fi2').value;
+  var mon=document.getElementById('fm').value;
+  var buyDate=document.getElementById('fbuy').value || today();
+  var start=document.getElementById('fs').value;
+  var notes=(document.getElementById('fo').value||'').trim();
+  var editId=document.getElementById('edit-id').value;
+  var al=document.getElementById('add-alert');
+  
+  if(!name||!phone||!dev||!tot||!inst||!mon||!start||!buyDate){ al.className='alert er'; al.textContent='⚠️ يرجى ملء جميع الحقول الإلزامية المشار إليها بـ *'; return; }
+  
+  if(editId) {
+    var idx = C.findIndex(x => x.id === editId);
+    if(idx !== -1) {
+      C[idx].name = name;
+      C[idx].phone = phone;
+      C[idx].dev = dev;
+      C[idx].tot = Number(tot);
+      C[idx].down = Number(down);
+      C[idx].inst = Number(inst);
+      C[idx].mon = Number(mon);
+      C[idx].buyDate = buyDate;
+      C[idx].start = start;
+      C[idx].notes = notes;
+      await saveToFirestore(C[idx]);
+      al.className='alert ok'; al.textContent='✅ تم تعديل بيانات الزبون بنجاح!';
+      resetToCreate();
+    }
+  } else {
+    var cu={id:uid(),name,phone,dev,tot:Number(tot),down:Number(down),inst:Number(inst),mon:Number(mon),buyDate,start,notes,pay:{},createdAt:Date.now()};
+    C.unshift(cu);
+    await saveToFirestore(cu);
+    al.className='alert ok'; al.textContent='✅ تم إضافة الزبون "'+name+'" بنجاح!';
+    clrF();
+  }
+  
+  window.__appData = C;
+  updStats(); rc();
+  setTimeout(()=>{al.className='alert';},4000);
+};
+
+window.startEdit = function(id) {
+  var c = C.find(x => x.id === id); if(!c) return;
+  document.getElementById('edit-id').value = c.id;
+  document.getElementById('fn').value = c.name;
+  document.getElementById('fp').value = c.phone;
+  document.getElementById('fd').value = c.dev;
+  document.getElementById('ft').value = c.tot;
+  document.getElementById('fdown').value = c.down || 0;
+  document.getElementById('fi2').value = c.inst;
+  document.getElementById('fm').value = c.mon;
+  document.getElementById('fbuy').value = c.buyDate || c.start;
+  document.getElementById('fs').value = c.start;
+  document.getElementById('fo').value = c.notes || '';
+  
+  document.getElementById('form-title').textContent = '✏️ تعديل بيانات الزبون: ' + c.name;
+  document.getElementById('save-btn').textContent = '💾 تحديث البيانات';
+  document.getElementById('cancel-edit-btn').style.display = 'inline-flex';
+  document.getElementById('clear-btn').style.display = 'none';
+  
+  calc();
+  sw('a');
+};
+
+window.resetToCreate = function() {
+  document.getElementById('edit-id').value = '';
+  document.getElementById('form-title').textContent = '➕ إضافة زبون جديد';
+  document.getElementById('save-btn').textContent = '💾 حفظ الزبون';
+  document.getElementById('cancel-edit-btn').style.display = 'none';
+  document.getElementById('clear-btn').style.display = 'inline-flex';
+  clrF();
+};
+
+window.clrF = function() {
+  ['fn','fp','fd','ft','fdown','fi2','fm','fo'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('fs').value=today();
+  document.getElementById('fbuy').value=today();
+  document.getElementById('prev').style.display='none';
+};
+
+window.openDet = function(id) {
+  var c=C.find(x=>x.id===id); if(!c) return;
+  ACTIVE_DET_ID = id;
+  
+  var currentRem = remAmt(c);
+  var isFullyPaidAhead = currentRem <= 0;
+  
+  var pc=pCount(c);var ti=Number(c.inst);var prog=Math.min(100,Math.round(pc/ti*100));
+  var done=isFullyPaidAhead;
+  var mh='';
+  var sd = new Date(c.start);
+  
+  for(var i=0;i<ti;i++){
+    var d=new Date(sd.getFullYear(),sd.getMonth()+i,1);
+    var ym=d.getFullYear()+'-'+p2(d.getMonth()+1);
+    var pd=c.pay&&c.pay[ym];
+    var actualAmt = pd && pd.amt ? pd.amt : c.mon;
+    
+    if (pd) {
+      mh+=`<div class="mi pd" data-mdpf="${esc(c.id)}" data-mdym="${esc(ym)}">`+
+        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="ms3">✅ مدفوع ('+fMoney(actualAmt)+')</div>'+
+        '<div class="mdt">'+fDate(pd.dt)+'</div>'+
+        '</div>';
+    } else if (isFullyPaidAhead) {
+      mh+='<div class="mi skp">'+
+        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="ms3">🔄 غير مطلوب</div>'+
+        '<div class="mdt">سداد مبكر</div>'+
+        '</div>';
+    } else {
+      mh+=`<div class="mi up2" data-mdpf="${esc(c.id)}" data-mdym="${esc(ym)}">`+
+        '<div class="mn2">'+MN[d.getMonth()]+' '+d.getFullYear()+'</div>'+
+        '<div class="ms3">⏳ لم يدفع</div>'+
+        '</div>';
+    }
+  }
+  
+  document.getElementById('mo-title').textContent='📋 '+c.name;
+  
+  var bodyContainer = document.getElementById('mo-body');
+  bodyContainer.innerHTML=
+    '<div class="ig">'+
+      '<div class="ib"><div class="il">رقم الهاتف</div><div class="iv">'+esc(c.phone)+'</div></div>'+
+      '<div class="ib"><div class="il">الجهاز</div><div class="iv">'+esc(c.dev)+'</div></div>'+
+      '<div class="ib"><div class="il">السعر الكلي للجهاز</div><div class="iv">'+fMoney(c.tot)+'</div></div>'+
+      '<div class="ib" style="background:#e8f0fd"><div class="il" style="color:#1a56db">المقدمة المدفوعة</div><div class="iv" style="color:#1a56db">'+fMoney(c.down||0)+'</div></div>'+
+      '<div class="ib"><div class="il">القسط الشهري الثابت</div><div class="iv">'+fMoney(c.mon)+'</div></div>'+
+      '<div class="box" style="background:#fff7ed; border-radius: 7px; padding: 9px 11px;"><div class="il" style="color:#c2410c">📆 تاريخ توقيع العقد</div><div class="iv" style="color:#c2410c">'+fDate(c.buyDate || c.start)+'</div></div>'+
+      '<div class="ib"><div class="il">📅 بداية الأقساط</div><div class="iv">'+fDate(c.start)+'</div></div>'+
+      '<div class="ib" style="background:'+(done?'#def7ec':'#fde8e8')+'">'+
+        '<div class="il" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
+        '<div class="iv" style="color:'+(done?'#057a55':'#c81e1e')+'">'+(done?'✅ أكمل الدفع':fMoney(currentRem))+'</div></div>'+
+    '</div>'+
+    '<div style="margin-bottom:12px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:#6b7280">أشهر الأقساط المدفوعة</span><span style="font-weight:700;color:#1a56db">'+pc+'/'+ti+' ('+prog+'%)</span></div>'+
+      '<div class="pb" style="width:100%;height:9px"><div class="pf'+(done?' dn':'')+'" style="width:'+prog+'%;height:9px"></div></div>'+
+    '</div>'+
+    (c.notes?'<div style="background:#fdf6b2;border-radius:7px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#92400e">📝 '+esc(c.notes)+'</div>':'')+
+    '<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#374151">📅 سجل الأشهر (اضغط لتسجيل قسط جديد أو تعديل قيمة المبلغ المدفوع)</div>'+
+    '<div class="mg">'+mh+'</div>';
+
+  // ربط الأحداث لبطاقات سجل الأشهر داخل المودال
+  bodyContainer.querySelectorAll('[data-mdpf]').forEach(b => {
+    b.addEventListener('click', () => openPayFlexMo(b.dataset.mdpf, b.dataset.mdym, true));
+  });
+
+  document.getElementById('mo-d').className='mo open';
+};
+
+window.closeMo = function(){ document.getElementById('mo-d').className='mo'; ACTIVE_DET_ID = null; };
+
+window.askDel = function(id) {
+  DEL_ID=id;
+  document.getElementById('mo-del').className='mo open';
+  document.getElementById('del-btn').onclick=async function(){
+    C=C.filter(c=>c.id!==DEL_ID);
+    window.__appData = C;
+    await deleteFromFirestore(DEL_ID);
+    updStats(); rc(); closeDelMo();
+  };
+};
+window.closeDelMo = function(){ document.getElementById('mo-del').className='mo'; DEL_ID=null; };
+
+window.expUnpaid = function() {
+  var ym=document.getElementById('selm').value||curYM();
+  var p=ym.split('-');var mn=MN[Number(p[1])-1]+' '+p[0];
+  var up=C.filter(c=>!isPaid(c,ym) && isDue(c, ym));
+  if(!up.length){alert('✅ جميع الزبائن المستحقين دفعوا قسط هذا شهر!');return;}
+  var txt='قائمة الزبائن الذين لم يدفعوا قسط '+mn+'\n========================================\n\n';
+  up.forEach((c,i)=>{txt+=(i+1)+'. '+c.name+'\n   رقم الهاتف: '+c.phone+'\n   القسط: '+fMoney(c.mon)+'\n\n';});
+  txt+='\nالإجمالي: '+up.length+' زبون';
+  var b=new Blob([txt],{type:'text/plain;charset=utf-8'});
+  var u=URL.createObjectURL(b);
+  var a=document.createElement('a');
+  a.href=u;a.download='متأخري_'+mn+'.txt';
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(u);
+};
+
+document.getElementById('mo-d').addEventListener('click',e=>{if(e.target===document.getElementById('mo-d'))closeMo();});
+document.getElementById('mo-del').addEventListener('click',e=>{if(e.target===document.getElementById('mo-del'))closeDelMo();});
+document.getElementById('mo-pf').addEventListener('click',e=>{if(e.target===document.getElementById('mo-pf'))closePayFlexMo();});
+
+window._getC    = () => C;
+window._isPaid  = isPaid;
+window._pCount  = pCount;
+window._remAmt  = remAmt;
+window._fDate   = fDate;
+window._fMoney  = fMoney;
+window._curYM   = curYM;
+window._MN      = MN;
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+var MN2=['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
+
+function _fd(s){if(!s||s==='-')return '-';var p=s.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function _fm(n){if(!n&&n!==0)return '0';return Number(n).toLocaleString()+' د.ع';}
+function _pc(c){return c.pay?Object.keys(c.pay).length:0;}
+function _tpa(c){if(!c.pay)return 0;var s=0;Object.keys(c.pay).forEach(function(k){s+=Number(c.pay[k].amt||c.mon);});return s;}
+function _rem(c){var base=Number(c.tot)-(Number(c.down)||0);var r=base-_tpa(c);return r>0?r:0;}
+function _ip(c,ym){return !!(c.pay&&c.pay[ym]);}
+function _idue(c,ym){
+  if(!c.start)return true;
+  var t=ym.split('-');var s=c.start.split('-');
+  var tY=Number(t[0]),tM=Number(t[1]),sY=Number(s[0]),sM=Number(s[1]),sD=Number(s[2]);
+  if(tY<sY||(tY===sY&&tM<sM))return false;
+  var now=new Date();
+  var curY=now.getFullYear(),curM=now.getMonth()+1,curD=now.getDate();
+  if(tY===curY&&tM===curM){return curD>=sD;}
+  return true;
+}
+function _cym(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);}
+function _getData(){return window.__appData||[];}
+
+function exportExcelAll(){
+  var C=_getData();
+  if(!C.length){alert('لا يوجد زبائن للتصدير');return;}
+  var ym=document.getElementById('selm').value||_cym();
+  var rows=[['#','اسم الزبون','رقم الهاتف','الجهاز','السعر الكلي','المقدمة','عدد الأقساط','القسط الشهري الثابت','تاريخ الشراء','تاريخ أول قسط','أشهر الدفع','إجمالي المدفوع أقساط','المبلغ المتبقي الكلي','حالة هذا الشهر','ملاحظات']];
+  C.forEach(function(c,i){
+    var statusStr = !_idue(c,ym) ? 'لم يحن يومه بعد' : (_ip(c,ym)?'دفع':'لم يدفع');
+    rows.push([i+1,c.name,c.phone,c.dev||'',Number(c.tot),Number(c.down||0),Number(c.inst),Number(c.mon),c.buyDate || c.start,c.start,_pc(c),_tpa(c),_rem(c),statusStr,c.notes||'']);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:5},{wch:20},{wch:16},{wch:18},{wch:14},{wch:14},{wch:12},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:14},{wch:20}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'الزبائن');
+  var p=ym.split('-');
+  XLSX.writeFile(wb,'زبائن_'+p[1]+'_'+p[0]+'.xlsx');
+}
+
+function exportMonthExcel(){
+  var C=_getData();
+  if(!C.length){alert('لا يوجد زبائن');return;}
+  var ym=document.getElementById('selm').value||_cym();
+  var p=ym.split('-');
+  var mn=MN2[Number(p[1])-1]+' '+p[0];
+  var rows=[['#','اسم الزبون','رقم الهاتف','مبلغ القسط المستلم','الحالة','تاريخ الدفع']];
+  
+  var filtered = C.filter(function(c){ return _idue(c,ym); });
+  filtered.forEach(function(c,i){
+    var paid=_ip(c,ym);
+    var amt=paid&&c.pay[ym]&&c.pay[ym].amt?c.pay[ym].amt:c.mon;
+    var pdate=paid&&c.pay[ym]?_fd(c.pay[ym].dt):'-';
+    rows.push([i+1,c.name,c.phone,paid?Number(amt):Number(c.mon),paid?'دفع':'لم يدفع',pdate]);
+  });
+  var ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:5},{wch:20},{wch:16},{wch:16},{wch:12},{wch:14}];
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,mn);
+  XLSX.writeFile(wb,'تقرير_'+mn+'.xlsx');
+}
+
+function exportPDF(id){
+  var C=_getData();
+  var c=C.find(function(x){return x.id===id;});
+  if(!c){alert('لم يتم العثور على الزبون');return;}
+  var pc=_pc(c);var ti=Number(c.inst);
+  var rem=_rem(c);var done=rem<=0;
+  var rows='';
+  var sd=new Date(c.start);
+  for(var i=0;i<ti;i++){
+    var d=new Date(sd.getFullYear(),sd.getMonth()+i,1);
+    var ym2=d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);
+    var pd=c.pay&&c.pay[ym2];
+    var actualAmt = pd && pd.amt ? pd.amt : c.mon;
+    
+    var statusText = '';
+    if(pd) {
+       statusText = '<b style="color:#057a55">✅ مدفوع ('+_fm(actualAmt)+')</b>';
+    } else if (done) {
+       statusText = '<b style="color:#6b7280">🔄 غير مطلوب (سداد مبكر)</b>';
+    } else {
+       statusText = '<b style="color:#c81e1e">⏳ لم يدفع</b>';
+    }
+    
+    rows+='<tr><td>'+(i+1)+'</td><td>'+MN2[d.getMonth()]+' '+d.getFullYear()+'</td>'+
+      '<td>'+statusText+'</td>'+
+      '<td>'+(pd?_fd(pd.dt):'-')+'</td></tr>';
+  }
+  var html='<!DOCTYPE html><html dir="rtl"><head><meta charset="UTF-8"><title>كشف حساب</title>'+
+    '<style>body{font-family:Tahoma,Arial,sans-serif;padding:28px;direction:rtl;color:#1f2937}'+
+    'h2{margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:18px}'+
+    '.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}'+
+    '.box{background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:9px 12px}'+
+    '.lbl{font-size:10px;color:#9ca3af;margin-bottom:2px}.val{font-weight:700;font-size:13px}'+
+    'table{width:100%;border-collapse:collapse}th{background:#f3f4f6;padding:7px 10px;text-align:right;font-size:12px}'+
+    'td{padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:12px}'+
+    '.footer{margin-top:18px;border-top:1px solid #e5e7eb;padding-top:10px;text-align:center;font-size:11px;color:#9ca3af}'+
+    '@media print{.noprint{display:none}}</style></head><body>'+
+    '<h2>🧾 كشف حساب زبون</h2>'+
+    '<div class="sub">تاريخ الإصدار: '+new Date().toLocaleDateString('ar-IQ')+'</div>'+
+    '<div class="grid">'+
+      '<div class="box"><div class="lbl">اسم الزبون</div><div class="val">'+c.name+'</div></div>'+
+      '<div class="box"><div class="lbl">رقم الهاتف</div><div class="val">'+c.phone+'</div></div>'+
+      '<div class="box"><div class="lbl">الجهاز</div><div class="val">'+c.dev+'</div></div>'+
+      '<div class="box"><div class="lbl">السعر الكلي للجهاز</div><div class="val">'+_fm(c.tot)+'</div></div>'+
+      '<div class="box" style="background:#e8f0fd"><div class="lbl" style="color:#1a56db">المقدمة</div><div class="val" style="color:#1a56db">'+_fm(c.down||0)+'</div></div>'+
+      '<div class="box"><div class="lbl">القسط الشهري الثابت</div><div class="val">'+_fm(c.mon)+'</div></div>'+
+      '<div class="box" style="background:#fff7ed"><div class="lbl" style="color:#c2410c">📆 تاريخ توقيع العقد (الشراء)</div><div class="val" style="color:#c2410c">'+_fd(c.buyDate || c.start)+'</div></div>'+
+      '<div class="box"><div class="lbl">📅 تاريخ أول قسط (الاستحقاق)</div><div class="val">'+_fd(c.start)+'</div></div>'+
+      '<div class="box"><div class="lbl">أشهر الأقساط المسجلة</div><div class="val">'+pc+' من '+ti+'</div></div>'+
+      '<div class="box" style="background:'+(done?'#def7ec':'#fde8e8')+'">'+
+        '<div class="lbl" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
+        '<div class="val" style="color:'+(done?'#057a55':'#c81e1e')+'">'+(done?'✅ أكمل الدفع':_rem(c))+'</div></div>'+
+    '</div>'+
+    '<table><thead><tr><th>#</th><th>الشهر</th><th>الحالة والمدفوع</th><th>تاريخ الدفع</th></tr></thead>'+
+    '<tbody>'+rows+'</tbody></table>'+
+    '<div class="footer">نظام إدارة الأقساط</div>'+
+    '<br><button class="noprint" onclick="window.print()" style="padding:9px 20px;background:#1a56db;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer">🖨️ طباعة / حفظ PDF</button>'+
+    '</body></html>';
+  var w=window.open('','_blank');
+  if(w){w.document.write(html);w.document.close();}
+  else{alert('يرجى السماح بالنوافذ المنبثقة في المتصفح');}
+}
+</script>
+</body>
+</html>
