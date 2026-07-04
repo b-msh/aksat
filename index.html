@@ -159,7 +159,6 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-page">
   <div class="login-card">
     <div class="login-logo">📱</div>
@@ -172,7 +171,6 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
-<!-- PENDING -->
 <div id="pending-page">
   <div class="pending-card">
     <div class="pending-icon">⏳</div>
@@ -186,7 +184,6 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
-<!-- ADMIN PAGE -->
 <div id="admin-page">
   <div class="admin-hdr">
     <div style="display:flex;align-items:center;gap:10px">
@@ -209,7 +206,6 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
-<!-- MAIN APP -->
 <div id="app" style="display:none">
 <header class="hdr">
   <div class="hdr-l">
@@ -308,7 +304,6 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 </div>
 </div>
 
-<!-- MODAL DETAIL -->
 <div class="mo" id="mo-d">
   <div class="md">
     <div class="mh"><h2 id="mo-title">تفاصيل الزبون</h2><button class="xb" onclick="closeMo()">✕</button></div>
@@ -316,7 +311,6 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
-<!-- MODAL PAYFLEX -->
 <div class="mo" id="mo-pf">
   <div class="md" style="max-width:380px">
     <div class="mh"><h2>💰 تسجيل قسط جديد - الدفع المرن</h2><button class="xb" onclick="closePayFlexMo()">✕</button></div>
@@ -334,7 +328,6 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
-<!-- MODAL DELETE -->
 <div class="mo" id="mo-del">
   <div class="md" style="max-width:360px">
     <div class="mh"><h2>⚠️ تأكيد الحذف</h2><button class="xb" onclick="closeDelMo()">✕</button></div>
@@ -391,13 +384,27 @@ function totPaidAmts(c){
 function isPaid(c,ym){ return !!(c.pay&&c.pay[ym]); }
 function pCount(c){ return c.pay?Object.keys(c.pay).length:0; }
 
+// دالة فحص الاستحقاق اليومي الصارم بناءً على اليوم المحدد للشهر المختار في شريط البحث
 function isDue(c, ym) {
   if(!c.start) return true;
   var target = ym.split('-');
   var start = c.start.split('-');
+  
   var tY = Number(target[0]), tM = Number(target[1]);
-  var sY = Number(start[0]), sM = Number(start[1]);
-  return (tY > sY) || (tY === sY && tM >= sM);
+  var sY = Number(start[0]), sM = Number(start[1]), sD = Number(start[2]);
+  
+  // إذا كان الشهر المختار مستقبلياً بالكامل مقارنة بشهر بداية القسط فلا يطالب به حالياً
+  if (tY < sY || (tY === sY && tM < sM)) return false;
+  
+  // إذا كان الشهر المختار هو نفس شهر بداية استحقاق الزبون، نقارن باليوم الفعلي الحالي
+  var now = new Date();
+  var curY = now.getFullYear(), curM = now.getMonth() + 1, curD = now.getDate();
+  
+  if (tY === curY && tM === curM) {
+    return curD >= sD; // مستحق فقط إذا كان يومنا الحالي يساوي يوم استحقاقه أو بعده
+  }
+  
+  return true;
 }
 
 function remAmt(c){ 
@@ -631,7 +638,8 @@ function rc() {
     var rem=remAmt(c);var done=rem<=0;
     var tr=document.createElement('tr');
     
-    var badgeHtml = !due ? '<span class="badge bskp">🔄 مؤجل للشهر القادم</span>' : (paid?'<span class="badge bpd">✅ دفع</span>':'<span class="badge bup">⏳ لم يدفع</span>');
+    // وضع العلامة الدقيقة بناءً على تاريخ اليوم المحدد برمجياً
+    var badgeHtml = !due ? '<span class="badge bskp">🔄 لم يحن يوم استحقاقه بعد</span>' : (paid?'<span class="badge bpd">✅ دفع</span>':'<span class="badge bup">⏳ لم يدفع</span>');
     
     tr.innerHTML='<td>'+(i+1)+'</td>'+
       '<td style="font-weight:700;color:#1f2937">'+esc(c.name)+'</td>'+
@@ -788,7 +796,7 @@ window.startEdit = function(id) {
   document.getElementById('fdown').value = c.down || 0;
   document.getElementById('fi2').value = c.inst;
   document.getElementById('fm').value = c.mon;
-  document.getElementById('fbuy').value = c.buyDate || c.start; // في حال عدم وجود حقل تاريخ شراء قديم نضع تاريخ البداية
+  document.getElementById('fbuy').value = c.buyDate || c.start;
   document.getElementById('fs').value = c.start;
   document.getElementById('fo').value = c.notes || '';
   
@@ -872,7 +880,7 @@ window.openDet = function(id) {
     '<div style="margin-bottom:12px">'+
       '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="color:#6b7280">أشهر الأقساط المدفوعة</span><span style="font-weight:700;color:#1a56db">'+pc+'/'+ti+' ('+prog+'%)</span></div>'+
       '<div class="pb" style="width:100%;height:9px"><div class="pf'+(done?' dn':'')+'" style="width:'+prog+'%;height:9px"></div></div>'+
-    '</div>'+
+    }
     (c.notes?'<div style="background:#fdf6b2;border-radius:7px;padding:8px 10px;margin-bottom:10px;font-size:12px;color:#92400e">📝 '+esc(c.notes)+'</div>':'')+
     '<div style="font-size:13px;font-weight:700;margin-bottom:6px;color:#374151">📅 سجل الأشهر (اضغط لتسجيل قسط جديد أو تعديل قيمة المبلغ المدفوع)</div>'+
     '<div class="mg">'+mh+'</div>';
@@ -897,7 +905,7 @@ window.expUnpaid = function() {
   var ym=document.getElementById('selm').value||curYM();
   var p=ym.split('-');var mn=MN[Number(p[1])-1]+' '+p[0];
   var up=C.filter(c=>!isPaid(c,ym) && isDue(c, ym));
-  if(!up.length){alert('✅ جميع الزبائن المستحقين دفعوا قسط هذا الشهر!');return;}
+  if(!up.length){alert('✅ جميع الزبائن المستحقين دفعوا قسط هذا شهر!');return;}
   var txt='قائمة الزبائن الذين لم يدفعوا قسط '+mn+'\n========================================\n\n';
   up.forEach((c,i)=>{txt+=(i+1)+'. '+c.name+'\n   رقم الهاتف: '+c.phone+'\n   القسط: '+fMoney(c.mon)+'\n\n';});
   txt+='\nالإجمالي: '+up.length+' زبون';
@@ -932,7 +940,16 @@ function _pc(c){return c.pay?Object.keys(c.pay).length:0;}
 function _tpa(c){if(!c.pay)return 0;var s=0;Object.keys(c.pay).forEach(function(k){s+=Number(c.pay[k].amt||c.mon);});return s;}
 function _rem(c){var base=Number(c.tot)-(Number(c.down)||0);var r=base-_tpa(c);return r>0?r:0;}
 function _ip(c,ym){return !!(c.pay&&c.pay[ym]);}
-function _idue(c,ym){if(!c.start)return true;var t=ym.split('-');var s=c.start.split('-');var tY=Number(t[0]),tM=Number(t[1]),sY=Number(s[0]),sM=Number(s[1]);return(tY>sY)||(tY===sY&&tM>=sM);}
+function _idue(c,ym){
+  if(!c.start)return true;
+  var t=ym.split('-');var s=c.start.split('-');
+  var tY=Number(t[0]),tM=Number(t[1]),sY=Number(s[0]),sM=Number(s[1]),sD=Number(s[2]);
+  if(tY<sY||(tY===sY&&tM<sM))return false;
+  var now=new Date();
+  var curY=now.getFullYear(),curM=now.getMonth()+1,curD=now.getDate();
+  if(tY===curY&&tM===curM){return curD>=sD;}
+  return true;
+}
 function _cym(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1<10?'0':'')+(d.getMonth()+1);}
 function _getData(){return window.__appData||[];}
 
@@ -942,7 +959,7 @@ function exportExcelAll(){
   var ym=document.getElementById('selm').value||_cym();
   var rows=[['#','اسم الزبون','رقم الهاتف','الجهاز','السعر الكلي','المقدمة','عدد الأقساط','القسط الشهري الثابت','تاريخ الشراء','تاريخ أول قسط','أشهر الدفع','إجمالي المدفوع أقساط','المبلغ المتبقي الكلي','حالة هذا الشهر','ملاحظات']];
   C.forEach(function(c,i){
-    var statusStr = !_idue(c,ym) ? 'مؤجل' : (_ip(c,ym)?'دفع':'لم يدفع');
+    var statusStr = !_idue(c,ym) ? 'لم يحن يومه بعد' : (_ip(c,ym)?'دفع':'لم يدفع');
     rows.push([i+1,c.name,c.phone,c.dev||'',Number(c.tot),Number(c.down||0),Number(c.inst),Number(c.mon),c.buyDate || c.start,c.start,_pc(c),_tpa(c),_rem(c),statusStr,c.notes||'']);
   });
   var ws=XLSX.utils.aoa_to_sheet(rows);
@@ -1006,37 +1023,3 @@ function exportPDF(id){
     '<style>body{font-family:Tahoma,Arial,sans-serif;padding:28px;direction:rtl;color:#1f2937}'+
     'h2{margin-bottom:4px}.sub{color:#6b7280;font-size:12px;margin-bottom:18px}'+
     '.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px}'+
-    '.box{background:#f9fafb;border:1px solid #e5e7eb;border-radius:7px;padding:9px 12px}'+
-    '.lbl{font-size:10px;color:#9ca3af;margin-bottom:2px}.val{font-weight:700;font-size:13px}'+
-    'table{width:100%;border-collapse:collapse}th{background:#f3f4f6;padding:7px 10px;text-align:right;font-size:12px}'+
-    'td{padding:7px 10px;border-bottom:1px solid #f3f4f6;font-size:12px}'+
-    '.footer{margin-top:18px;border-top:1px solid #e5e7eb;padding-top:10px;text-align:center;font-size:11px;color:#9ca3af}'+
-    '@media print{.noprint{display:none}}</style></head><body>'+
-    '<h2>🧾 كشف حساب زبون</h2>'+
-    '<div class="sub">تاريخ الإصدار: '+new Date().toLocaleDateString('ar-IQ')+'</div>'+
-    '<div class="grid">'+
-      '<div class="box"><div class="lbl">اسم الزبون</div><div class="val">'+c.name+'</div></div>'+
-      '<div class="box"><div class="lbl">رقم الهاتف</div><div class="val">'+c.phone+'</div></div>'+
-      '<div class="box"><div class="lbl">الجهاز</div><div class="val">'+c.dev+'</div></div>'+
-      '<div class="box"><div class="lbl">السعر الكلي للجهاز</div><div class="val">'+_fm(c.tot)+'</div></div>'+
-      '<div class="box" style="background:#e8f0fd"><div class="lbl" style="color:#1a56db">المقدمة</div><div class="val" style="color:#1a56db">'+_fm(c.down||0)+'</div></div>'+
-      '<div class="box"><div class="lbl">القسط الشهري الثابت</div><div class="val">'+_fm(c.mon)+'</div></div>'+
-      '<div class="box" style="background:#fff7ed"><div class="lbl" style="color:#c2410c">📆 تاريخ توقيع العقد (الشراء)</div><div class="val" style="color:#c2410c">'+_fd(c.buyDate || c.start)+'</div></div>'+
-      '<div class="box"><div class="lbl">📅 تاريخ أول قسط (الاستحقاق)</div><div class="val">'+_fd(c.start)+'</div></div>'+
-      '<div class="box"><div class="lbl">أشهر الأقساط المسجلة</div><div class="val">'+pc+' من '+ti+'</div></div>'+
-      '<div class="box" style="background:'+(done?'#def7ec':'#fde8e8')+'">'+
-        '<div class="lbl" style="color:'+(done?'#057a55':'#c81e1e')+'">المبلغ المتبقي الكلي</div>'+
-        '<div class="val" style="color:'+(done?'#057a55':'#c81e1e')+'">'+(done?'✅ أكمل الدفع':_fm(rem))+'</div></div>'+
-    '</div>'+
-    '<table><thead><tr><th>#</th><th>الشهر</th><th>الحالة والمدفوع</th><th>تاريخ الدفع</th></tr></thead>'+
-    '<tbody>'+rows+'</tbody></table>'+
-    '<div class="footer">نظام إدارة الأقساط</div>'+
-    '<br><button class="noprint" onclick="window.print()" style="padding:9px 20px;background:#1a56db;color:#fff;border:none;border-radius:7px;font-size:13px;cursor:pointer">🖨️ طباعة / حفظ PDF</button>'+
-    '</body></html>';
-  var w=window.open('','_blank');
-  if(w){w.document.write(html);w.document.close();}
-  else{alert('يرجى السماح بالنوافذ المنبثقة في المتصفح');}
-}
-</script>
-</body>
-</html>
