@@ -137,8 +137,8 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 .rem.dn{color:#057a55}
 .exp-box{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:14px}
 .ex-card{border-radius:9px;padding:11px 13px}
-.ex-card.g"><div class="el">✅ دفعوا</div><div class="ev" id="pc-g">0 زبون</div></div>
-.ex-card r"><div class="el">⏳ لم يدفعوا</div><div class="ev" id="pc-r">0 زبون</div></div>
+.ex-card.g{background:#def7ec;border:1px solid #bcf0da}
+.ex-card.r{background:#fde8e8;border:1px solid #fbd5d5}
 .ex-card .el{font-size:11px;font-weight:700;margin-bottom:3px}
 .ex-card.g .el{color:#057a55}
 .ex-card.r .el{color:#c81e1e}
@@ -159,6 +159,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login-page">
   <div class="login-card">
     <div class="login-logo">📱</div>
@@ -171,6 +172,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- PENDING -->
 <div id="pending-page">
   <div class="pending-card">
     <div class="pending-icon">⏳</div>
@@ -184,6 +186,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- ADMIN PAGE -->
 <div id="admin-page">
   <div class="admin-hdr">
     <div style="display:flex;align-items:center;gap:10px">
@@ -206,6 +209,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- MAIN APP -->
 <div id="app" style="display:none">
 <header class="hdr">
   <div class="hdr-l">
@@ -246,7 +250,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
       </div>
       <div class="tw">
         <table>
-          <thead><tr><th>#</th><th>اسم الزبون</th><th>رقم الهاتف</th><th>الجهاز</th><th>القسط الشهري</th><th>المبلغ المتبقي</th><th>التقدم</th><th>حالة هذا الشهر</th><th>إجراءات</th></tr></thead>
+          <thead><tr><th>#</th><th>اسم الزبون</th><th>رقم الهاتف</th><th>الجهاز</th><th>القسط الشهري</th><th>المبلغ المتبقي</th><th>التقدم</th><th>حالة هذا الشهر</th><th>تاريخ الاستحقاق</th><th>إجراءات</th></tr></thead>
           <tbody id="ctb"></tbody>
         </table>
         <div id="emp-c" class="emp" style="display:none"><div class="ei">📭</div><p>لا توجد نتائج</p></div>
@@ -304,6 +308,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
 </div>
 </div>
 
+<!-- MODAL DETAIL -->
 <div class="mo" id="mo-d">
   <div class="md">
     <div class="mh"><h2 id="mo-title">تفاصيل الزبون</h2><button class="xb" onclick="closeMo()">✕</button></div>
@@ -311,6 +316,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- MODAL PAYFLEX -->
 <div class="mo" id="mo-pf">
   <div class="md" style="max-width:380px">
     <div class="mh"><h2>💰 تسجيل قسط جديد - الدفع المرن</h2><button class="xb" onclick="closePayFlexMo()">✕</button></div>
@@ -328,6 +334,7 @@ td{padding:9px 10px;color:#374151;vertical-align:middle}
   </div>
 </div>
 
+<!-- MODAL DELETE -->
 <div class="mo" id="mo-del">
   <div class="md" style="max-width:360px">
     <div class="mh"><h2>⚠️ تأكيد الحذف</h2><button class="xb" onclick="closeDelMo()">✕</button></div>
@@ -394,6 +401,24 @@ function isDue(c, ym) {
   var curY = now.getFullYear(), curM = now.getMonth() + 1, curD = now.getDate();
   if (tY === curY && tM === curM) { return curD >= sD; }
   return true;
+}
+
+// دالة ذكية لحساب وعرض تاريخ الاستحقاق الدقيق والمطلوب بالصيغة YYYY/M/D بناءً على خيار البحث
+function getDueStringBySearch(c, ym) {
+  if(!c.start) return '-';
+  var target = ym.split('-');
+  var start = c.start.split('-');
+  
+  var tY = Number(target[0]), tM = Number(target[1]);
+  var sD = Number(start[2]);
+  
+  // توليد تاريخ استحقاق الشهر المختار
+  var d = new Date(tY, tM - 1, sD);
+  var expectedMonth = (tM - 1) % 12;
+  if (d.getMonth() !== expectedMonth) {
+    d = new Date(tY, tM, 0); // معالجة نهاية الشهور
+  }
+  return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate();
 }
 
 function remAmt(c){ 
@@ -638,7 +663,10 @@ function rc() {
     var rem=remAmt(c);var done=rem<=0;
     var tr=document.createElement('tr');
     
-    var badgeHtml = !due ? '<span class="badge bskp">🔄 لم يحن يوم استحقاقه بعد</span>' : (paid?'<span class="badge bpd">✅ دفع</span>':'<span class="badge bup">⏳ لم يدفع</span>');
+    var badgeHtml = !due ? '<span class="badge bskp">🔄 لم يحن بعد</span>' : (paid?'<span class="badge bpd">✅ دفع</span>':'<span class="badge bup">⏳ لم يدفع</span>');
+    
+    // جلب وحساب تاريخ القسط للشهر المختار بالصيغة المطلوبة YYYY/M/D
+    var dueString = done ? 'مكتمل' : getDueStringBySearch(c, ym);
     
     tr.innerHTML='<td>'+(i+1)+'</td>'+
       '<td style="font-weight:700;color:#1f2937">'+esc(c.name)+'</td>'+
@@ -648,6 +676,7 @@ function rc() {
       '<td class="rem'+(done?' dn':'')+'">'+(done?'✅ مكتمل':fMoney(rem))+'</td>'+
       '<td><div class="pb"><div class="pf'+(done?' dn':'')+'" style="width:'+prog+'%"></div></div><div class="pt">'+pc+'/'+ti+'</div></td>'+
       '<td>'+badgeHtml+'</td>'+
+      '<td style="font-weight:700;color:#4b5563;font-size:12px;direction:ltr;text-align:right">'+dueString+'</td>'+ // حقل تاريخ الاستحقاق القادم الجديد
       '<td><div style="display:flex;gap:5px">'+
         '<button class="btn bp bs" data-det="'+esc(c.id)+'">📋 تفاصيل</button>'+
         '<button class="btn by bs" data-edit="'+esc(c.id)+'">✏️ تعديل</button>'+
@@ -829,13 +858,7 @@ function resetToCreate() {
   clrF();
 }
 
-function clrF() {
-  ['fn','fp','fd','ft','fdown','fi2','fm','fo'].forEach(id=>{document.getElementById(id).value='';});
-  document.getElementById('fs').value=today();
-  document.getElementById('fbuy').value=today();
-  document.getElementById('prev').style.display='none';
-}
-
+// ── تفاصيل الزبون المحدثة مع تفعيل اليوم والشهر والسنة ──
 function openDet(id) {
   var c=C.find(x=>x.id===id); if(!c) return;
   ACTIVE_DET_ID = id;
@@ -848,14 +871,10 @@ function openDet(id) {
   var mh='';
   var sd = new Date(c.start);
   
-  // الاحتفاظ باليوم الرئيسي المدخل بالبداية لتفادي مشكلة ترحيل الأيام (مثلاً نهاية الأشهر)
   var originalDay = sd.getDate();
   
   for(var i=0;i<ti;i++){
-    // حساب تاريخ الاستحقاق الدقيق لكل قسط شهرياً بشكل سليم مع الحفاظ على يوم الاستحقاق
     var d = new Date(sd.getFullYear(), sd.getMonth() + i, originalDay);
-    
-    // إذا تغير الشهر بسبب تجاوز عدد الأيام (مثال قسط يوم 31 في شهر فبراير)، نقوم بضبطه لآخر يوم في الشهر المقصود
     var targetMonth = (sd.getMonth() + i) % 12;
     if (d.getMonth() !== targetMonth) {
       d = new Date(sd.getFullYear(), sd.getMonth() + i + 1, 0);
@@ -865,7 +884,6 @@ function openDet(id) {
     var pd=c.pay&&c.pay[ym];
     var actualAmt = pd && pd.amt ? pd.amt : c.mon;
     
-    // تنسيق وعرض التاريخ الدقيق للاستحقاق (يوم/شهر/سنة)
     var dueFullDateStr = d.getDate() + ' ' + MN[d.getMonth()] + ' ' + d.getFullYear();
     
     if (pd) {
@@ -917,6 +935,13 @@ function openDet(id) {
   });
 
   document.getElementById('mo-d').className='mo open';
+}
+
+function clrF() {
+  ['fn','fp','fd','ft','fdown','fi2','fm','fo'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('fs').value=today();
+  document.getElementById('fbuy').value=today();
+  document.getElementById('prev').style.display='none';
 }
 
 function closeMo() { document.getElementById('mo-d').className='mo'; ACTIVE_DET_ID = null; }
